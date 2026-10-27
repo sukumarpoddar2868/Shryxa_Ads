@@ -2,7 +2,7 @@ streamlit>=1.32
 pydantic>=2.6
 pyyaml>=6.0
 python-dotenv>=1.0
-google-genai>=0.3.0
+groq
 requests>=2.31
 bcrypt>=4.1
 razorpay>=1.4
