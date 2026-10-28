@@ -272,6 +272,8 @@ def handle_meta_oauth_callback() -> None:
     except Exception as exc:
         # Never log exception text, tokens, authorization codes,
         # or sensitive URL parameters.
+        import traceback
+        traceback.print_exc()
         print(
             "META_OAUTH_CALLBACK unexpected_error="
             f"{type(exc).__name__}",
