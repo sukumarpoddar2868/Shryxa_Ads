@@ -14,7 +14,6 @@ import sys
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
-from auth.meta_security import encrypt_access_token
 
 
 # ---------------------------------------------------------------------
@@ -25,6 +24,7 @@ ROOT = Path(__file__).resolve().parent.parent
 
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
+from auth.meta_security import encrypt_access_token
 
 PAYLOAD_PIPELINE = ROOT / "payload_pipeline"
 
