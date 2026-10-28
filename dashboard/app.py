@@ -53,21 +53,17 @@ from auth.meta_oauth import (
 )
 
 # ---------------------------------------------------------------------
-# Diagnostic logging
-# ---------------------------------------------------------------------
-# Streamlit Cloud captures stdout. Using print() here makes the
-# diagnostic easy to find in the deployed app's logs.
-#
-# Never log authorization codes, OAuth state values, or access tokens.
+# Diagnostics
 # ---------------------------------------------------------------------
 
 print(
     "META_OAUTH_DIAGNOSTIC "
     f"app_file={__file__} "
     f"db_file={getattr(db_mod, '__file__', 'unknown')} "
-    f"has_consume_state={hasattr(db_mod, 'consume_meta_oauth_state')}",
+    f"has_consume_state={callable(getattr(db_mod, 'consume_meta_oauth_state', None))}",
     flush=True,
 )
+
 
 # ---------------------------------------------------------------------
 # Restore the existing authenticated session
@@ -76,20 +72,16 @@ print(
 me = auth_mod.current_user()
 
 print(
-    "META_OAUTH_DIAGNOSTIC "
-    f"initial_session_restored={me is not None}",
+    f"META_OAUTH_DIAGNOSTIC initial_session_restored={me is not None}",
     flush=True,
 )
 
-# Retain the existing cookie warm-up attempt.
-# This does not guarantee that the browser cookie has finished loading.
 if me is None and not st.session_state.get("_cookie_warmup_done"):
     st.session_state["_cookie_warmup_done"] = True
     me = auth_mod.current_user()
 
     print(
-        "META_OAUTH_DIAGNOSTIC "
-        f"session_after_warmup={me is not None}",
+        f"META_OAUTH_DIAGNOSTIC session_after_warmup={me is not None}",
         flush=True,
     )
 
@@ -99,11 +91,11 @@ if me is None and not st.session_state.get("_cookie_warmup_done"):
 # ---------------------------------------------------------------------
 
 def handle_meta_oauth_callback() -> None:
-    """Validate a Meta callback and keep pending connection data server-side."""
+    """Validate the callback state and prepare the pending Meta connection."""
 
     params = st.query_params
 
-    # This is not a Meta OAuth callback; continue normal navigation.
+    # This is not an OAuth callback.
     if not any(key in params for key in ("code", "state", "error")):
         return
 
@@ -116,8 +108,8 @@ def handle_meta_oauth_callback() -> None:
     code = params.get("code", "")
     oauth_error = params.get("error")
 
-    # Remove the one-time callback parameters from the browser URL.
-    # Do not log their values.
+    # Remove callback parameters from the visible URL.
+    # Never log or display their values.
     st.query_params.clear()
 
     if oauth_error:
@@ -144,28 +136,14 @@ def handle_meta_oauth_callback() -> None:
         )
         return
 
-    # Check the authenticated user.
-    current_user = auth_mod.current_user()
-
-    if not current_user:
-        print(
-            "META_OAUTH_CALLBACK authenticated_user_missing=True",
-            flush=True,
-        )
-
-        st.session_state["_meta_oauth_error"] = (
-            "Your session could not be verified. Please sign in and "
-            "start the Meta connection again."
-        )
-        return
-
-    print(
-        "META_OAUTH_CALLBACK authenticated_user_present=True",
-        flush=True,
-    )
-
     try:
-        # Verify that the expected database function is available.
+        # -------------------------------------------------------------
+        # 1. Validate and atomically consume the server-side OAuth state.
+        #
+        # This happens before requiring a restored browser session.
+        # The state record supplies the trusted user_id and client_id.
+        # -------------------------------------------------------------
+
         consume_state = getattr(
             db_mod,
             "consume_meta_oauth_state",
@@ -178,13 +156,11 @@ def handle_meta_oauth_callback() -> None:
                 flush=True,
             )
 
-            st.session_state["_meta_oauth_error"] = (
+            raise MetaOAuthError(
                 "The Meta authorization service is temporarily unavailable. "
                 "Please try again later."
             )
-            return
 
-        # Atomically validate and consume the one-time state.
         state_record = consume_state(state)
 
         if not state_record:
@@ -195,28 +171,84 @@ def handle_meta_oauth_callback() -> None:
 
             raise MetaOAuthError(
                 "The authorization request expired or was already used. "
-                "Please try connecting again."
+                "Please start the connection again."
             )
 
-        # Never trust a user ID or client ID from the callback URL.
-        if int(state_record["user_id"]) != int(current_user["id"]):
+        user_id = int(state_record["user_id"])
+        client_id = int(state_record["client_id"])
+
+        # -------------------------------------------------------------
+        # 2. Verify the current session, when available.
+        #
+        # A valid state is bound server-side to the user and client.
+        # If the cookie has not restored yet, retain that verified
+        # association rather than trusting IDs from the URL.
+        # -------------------------------------------------------------
+
+        current_user = auth_mod.current_user()
+
+        if current_user is not None:
+            if int(current_user["id"]) != user_id:
+                print(
+                    "META_OAUTH_CALLBACK state_user_mismatch=True",
+                    flush=True,
+                )
+
+                raise MetaOAuthError(
+                    "This authorization request belongs to a different "
+                    "signed-in user. Please sign in to the correct account "
+                    "and reconnect Meta."
+                )
+
             print(
-                "META_OAUTH_CALLBACK state_user_mismatch=True",
+                "META_OAUTH_CALLBACK authenticated_user_present=True",
+                flush=True,
+            )
+        else:
+            print(
+                "META_OAUTH_CALLBACK session_missing_using_validated_state=True",
+                flush=True,
+            )
+
+        # -------------------------------------------------------------
+        # 3. Verify that the client still belongs to the state-record user.
+        # -------------------------------------------------------------
+
+        owned_clients = db_mod.list_clients(user_id)
+
+        client_exists = any(
+            int(client["id"]) == client_id
+            for client in owned_clients
+        )
+
+        if not client_exists:
+            print(
+                "META_OAUTH_CALLBACK client_ownership_check_failed=True",
                 flush=True,
             )
 
             raise MetaOAuthError(
-                "The authorization request does not belong to this user."
+                "The client associated with this authorization could not "
+                "be found in your workspace. Please start again."
             )
 
-        client_id = int(state_record["client_id"])
-        user_id = int(current_user["id"])
+        # -------------------------------------------------------------
+        # 4. Exchange the authorization code on the server.
+        # -------------------------------------------------------------
 
-        # Exchange the authorization code on the server.
         token_data = exchange_code_for_token(code)
         access_token = token_data["access_token"]
 
-        # Retrieve the identity associated with this token and its accounts.
+        if not isinstance(access_token, str) or not access_token:
+            raise MetaOAuthError(
+                "Meta did not return a usable access token. "
+                "Please connect again."
+            )
+
+        # -------------------------------------------------------------
+        # 5. Retrieve the Meta identity and accessible ad accounts.
+        # -------------------------------------------------------------
+
         profile = get_meta_profile(access_token)
         accounts = get_ad_accounts(access_token)
 
@@ -231,7 +263,10 @@ def handle_meta_oauth_callback() -> None:
                 "the authorized Meta user has access to an ad account."
             )
 
-        # Parse the token expiry when Meta provides one.
+        # -------------------------------------------------------------
+        # 6. Parse the token expiry.
+        # -------------------------------------------------------------
+
         token_expires_at = None
         expires_in = token_data.get("expires_in")
 
@@ -244,8 +279,16 @@ def handle_meta_oauth_callback() -> None:
             except (ValueError, TypeError, OverflowError):
                 token_expires_at = None
 
-        # Tokens remain server-side in Streamlit session state.
-        # Never put access tokens in query parameters or display them.
+        # -------------------------------------------------------------
+        # 7. Keep the pending connection server-side.
+        #
+        # dashboard/views/clients.py checks that the logged-in user
+        # matches pending["user_id"] and still owns pending["client_id"]
+        # before saving the connection.
+        #
+        # Never put access tokens in the URL or logs.
+        # -------------------------------------------------------------
+
         st.session_state["_meta_oauth_pending"] = {
             "user_id": user_id,
             "client_id": client_id,
@@ -256,13 +299,18 @@ def handle_meta_oauth_callback() -> None:
             "accounts": accounts,
         }
 
-        # Clear any previous callback error.
         st.session_state.pop("_meta_oauth_error", None)
 
         print(
             "META_OAUTH_CALLBACK token_exchange_and_account_fetch_succeeded=True",
             flush=True,
         )
+
+        if current_user is None:
+            print(
+                "META_OAUTH_CALLBACK login_required_to_finish=True",
+                flush=True,
+            )
 
     except MetaOAuthError as exc:
         print(
@@ -274,7 +322,6 @@ def handle_meta_oauth_callback() -> None:
         st.session_state["_meta_oauth_error"] = str(exc)
 
     except (ValueError, KeyError, TypeError) as exc:
-        # Avoid exposing internal details or sensitive values to the user.
         print(
             "META_OAUTH_CALLBACK data_processing_error="
             f"{type(exc).__name__}",
@@ -285,8 +332,20 @@ def handle_meta_oauth_callback() -> None:
             "Could not complete the Meta connection. Please try again."
         )
 
+    except Exception as exc:
+        # Keep unexpected failures out of the UI, but record the type
+        # to make the failure diagnosable in Streamlit Cloud logs.
+        print(
+            "META_OAUTH_CALLBACK unexpected_error="
+            f"{type(exc).__name__}",
+            flush=True,
+        )
 
-# Process a Meta callback before rendering navigation.
+        st.session_state["_meta_oauth_error"] = (
+            "Could not complete the Meta connection. Please try again."
+        )
+
+
 handle_meta_oauth_callback()
 
 
@@ -296,7 +355,6 @@ handle_meta_oauth_callback()
 
 THIS_DIR = Path(__file__).parent
 
-# Public policy pages remain visible regardless of authentication state.
 policy_pages = [
     st.Page(str(THIS_DIR / "views" / "terms.py"), title="Terms"),
     st.Page(str(THIS_DIR / "views" / "privacy.py"), title="Privacy"),
@@ -304,12 +362,11 @@ policy_pages = [
     st.Page(str(THIS_DIR / "views" / "service.py"), title="Service"),
 ]
 
-# Refresh the authenticated user after callback processing.
+# Refresh the session after callback processing.
 me = auth_mod.current_user()
 
 print(
-    "META_OAUTH_DIAGNOSTIC "
-    f"session_before_navigation={me is not None}",
+    f"META_OAUTH_DIAGNOSTIC session_before_navigation={me is not None}",
     flush=True,
 )
 
@@ -338,7 +395,6 @@ else:
         *policy_pages,
     ]
 
-    # Admin tab is visible only to users marked as administrators.
     if me.get("is_admin"):
         pages.append(
             st.Page(
