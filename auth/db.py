@@ -379,8 +379,6 @@ def make_admin(user_id: int) -> None:
         "UPDATE public.users SET is_admin = 1 WHERE id = ?",
         (user_id,),
     )
-
-
 # ---------------------------------------------------------------------
 # Subscriptions
 # ---------------------------------------------------------------------
@@ -565,6 +563,7 @@ def add_client(
                         client_status,
                     ),
                 )
+
                 row = cursor.fetchone()
 
                 if row is None:
@@ -603,6 +602,7 @@ def client_count(user_id: int) -> int:
         """,
         (user_id,),
     )
+
     return int(row["n"]) if row else 0
 
 
@@ -674,9 +674,6 @@ def delete_user_sessions(user_id: int) -> None:
         "DELETE FROM public.sessions WHERE user_id = ?",
         (user_id,),
     )
-
-
-
 # ---------------------------------------------------------------------
 # Client-specific Meta connections
 # ---------------------------------------------------------------------
@@ -706,6 +703,7 @@ def save_meta_connection(
     try:
         with _connect() as connection:
             with connection.cursor() as cursor:
+                # Verify that this client belongs to the current user.
                 cursor.execute(
                     """
                     SELECT id
@@ -908,8 +906,6 @@ def list_meta_connections(user_id: int) -> list[dict]:
         """,
         (user_id,),
     )
-
-
 # ---------------------------------------------------------------------
 # Meta OAuth state management
 # ---------------------------------------------------------------------
@@ -1015,3 +1011,207 @@ def cleanup_meta_oauth_states() -> int:
 
     return result["rowcount"]
 
+
+# ---------------------------------------------------------------------
+# Pending client-specific Meta OAuth connections
+# ---------------------------------------------------------------------
+
+META_OAUTH_PENDING_TTL_MINUTES = 10
+
+
+def create_meta_oauth_pending(
+    user_id: int,
+    client_id: int,
+    encrypted_access_token: str,
+    meta_user_id: str | None,
+    meta_user_name: str | None,
+    accounts: list[dict],
+    token_expires_at: datetime | None = None,
+) -> str:
+    """
+    Persist an encrypted, short-lived pending Meta connection.
+
+    Returns a random, one-time ticket. Only its SHA-256 hash is stored.
+    The access token must already be encrypted before calling this function.
+    """
+    from psycopg.types.json import Jsonb
+
+    if not isinstance(user_id, int) or user_id <= 0:
+        raise ValueError("Invalid user ID.")
+
+    if not isinstance(client_id, int) or client_id <= 0:
+        raise ValueError("Invalid client ID.")
+
+    if (
+        not isinstance(encrypted_access_token, str)
+        or not encrypted_access_token
+    ):
+        raise ValueError("Encrypted access token is required.")
+
+    if not isinstance(accounts, list) or not accounts:
+        raise ValueError("At least one Meta ad account is required.")
+
+    ticket = secrets.token_urlsafe(32)
+    ticket_hash = hashlib.sha256(ticket.encode("utf-8")).hexdigest()
+
+    with _connect() as connection:
+        with connection.cursor() as cursor:
+            # Verify that this client belongs to this user.
+            cursor.execute(
+                """
+                SELECT id
+                FROM public.clients
+                WHERE id = %s AND user_id = %s
+                """,
+                (client_id, user_id),
+            )
+
+            if cursor.fetchone() is None:
+                raise ValueError("Client not found in your workspace.")
+
+            # Remove older pending attempts for this same client.
+            cursor.execute(
+                """
+                DELETE FROM public.meta_oauth_pending
+                WHERE user_id = %s
+                  AND client_id = %s
+                """,
+                (user_id, client_id),
+            )
+
+            cursor.execute(
+                """
+                INSERT INTO public.meta_oauth_pending (
+                    ticket_hash,
+                    user_id,
+                    client_id,
+                    meta_user_id,
+                    meta_user_name,
+                    accounts,
+                    access_token_encrypted,
+                    token_expires_at,
+                    created_at,
+                    expires_at
+                )
+                VALUES (
+                    %s, %s, %s, %s, %s, %s, %s, %s,
+                    NOW(),
+                    NOW() + (%s * INTERVAL '1 minute')
+                )
+                """,
+                (
+                    ticket_hash,
+                    user_id,
+                    client_id,
+                    meta_user_id,
+                    meta_user_name,
+                    Jsonb(accounts),
+                    encrypted_access_token,
+                    token_expires_at,
+                    META_OAUTH_PENDING_TTL_MINUTES,
+                ),
+            )
+
+    # The raw ticket is returned once; it is never stored in the database.
+    return ticket
+
+
+def get_meta_oauth_pending(
+    ticket: str,
+    user_id: int,
+) -> dict | None:
+    """
+    Retrieve an unexpired pending connection for the specified user.
+
+    Does not consume the ticket. The ticket is consumed after saving the
+    selected Meta account.
+    """
+    if not isinstance(ticket, str) or not ticket or len(ticket) > 512:
+        return None
+
+    if not isinstance(user_id, int) or user_id <= 0:
+        return None
+
+    ticket_hash = hashlib.sha256(ticket.encode("utf-8")).hexdigest()
+
+    with _connect() as connection:
+        with connection.cursor() as cursor:
+            cursor.execute(
+                """
+                SELECT
+                    id,
+                    user_id,
+                    client_id,
+                    meta_user_id,
+                    meta_user_name,
+                    accounts,
+                    access_token_encrypted,
+                    token_expires_at,
+                    created_at,
+                    expires_at
+                FROM public.meta_oauth_pending
+                WHERE ticket_hash = %s
+                  AND user_id = %s
+                  AND expires_at > NOW()
+                """,
+                (ticket_hash, user_id),
+            )
+
+            row = cursor.fetchone()
+
+    if row is None:
+        return None
+
+    result = dict(row)
+
+    # psycopg normally decodes JSONB automatically, but handle either form.
+    if isinstance(result.get("accounts"), str):
+        try:
+            result["accounts"] = json.loads(result["accounts"])
+        except json.JSONDecodeError:
+            return None
+
+    if not isinstance(result.get("accounts"), list):
+        return None
+
+    return result
+
+
+def consume_meta_oauth_pending(
+    ticket: str,
+    user_id: int,
+) -> bool:
+    """Delete a pending connection after it has been completed or cancelled."""
+    if not isinstance(ticket, str) or not ticket or len(ticket) > 512:
+        return False
+
+    if not isinstance(user_id, int) or user_id <= 0:
+        return False
+
+    ticket_hash = hashlib.sha256(ticket.encode("utf-8")).hexdigest()
+
+    with _connect() as connection:
+        with connection.cursor() as cursor:
+            cursor.execute(
+                """
+                DELETE FROM public.meta_oauth_pending
+                WHERE ticket_hash = %s
+                  AND user_id = %s
+                RETURNING id
+                """,
+                (ticket_hash, user_id),
+            )
+
+            return cursor.fetchone() is not None
+
+
+def cleanup_meta_oauth_pending() -> int:
+    """Delete expired pending Meta connections."""
+    result = _execute(
+        """
+        DELETE FROM public.meta_oauth_pending
+        WHERE expires_at <= NOW()
+        """
+    )
+
+    return result["rowcount"]
