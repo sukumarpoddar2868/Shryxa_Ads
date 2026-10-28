@@ -21,6 +21,8 @@ from __future__ import annotations
 import json
 import os
 import uuid
+import hashlib
+import secrets
 
 from contextlib import contextmanager
 from datetime import datetime, timedelta, timezone
@@ -499,54 +501,100 @@ def add_client(
     ad_account_id: str,
     page_id: str = "",
     business_name: str = "",
+    service_model: str = "self_service",
+    billing_arrangement: str | None = None,
+    client_status: str = "pending_access",
 ) -> int:
-    """Add a client and return its generated ID."""
-    with _connect() as connection:
-        with connection.cursor() as cursor:
-            cursor.execute(
-                """
-                INSERT INTO public.clients (
-                    user_id,
-                    ad_account_id,
-                    page_id,
-                    business_name,
-                    created_at
+    """Add a client belonging to a user and return its generated ID."""
+    from psycopg.errors import UniqueViolation
+
+    ad_account_id = (ad_account_id or "").strip()
+    page_id = (page_id or "").strip()
+    business_name = (business_name or "").strip()
+
+    if not ad_account_id:
+        raise ValueError("Ad Account ID is required.")
+
+    if not business_name:
+        raise ValueError("Business name is required.")
+
+    if service_model not in ("agency_managed", "self_service"):
+        raise ValueError("Invalid service model.")
+
+    if client_status not in ("pending_access", "active", "paused"):
+        raise ValueError("Invalid client status.")
+
+    allowed_billing = (
+        "management_fee_only",
+        "management_plus_ad_budget",
+    )
+
+    if service_model == "self_service":
+        billing_arrangement = None
+    elif billing_arrangement not in allowed_billing:
+        raise ValueError(
+            "Choose a billing arrangement for agency-managed clients."
+        )
+
+    try:
+        with _connect() as connection:
+            with connection.cursor() as cursor:
+                cursor.execute(
+                    """
+                    INSERT INTO public.clients (
+                        user_id,
+                        ad_account_id,
+                        page_id,
+                        business_name,
+                        created_at,
+                        service_model,
+                        billing_arrangement,
+                        client_status
+                    )
+                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+                    RETURNING id
+                    """,
+                    (
+                        user_id,
+                        ad_account_id,
+                        page_id or None,
+                        business_name,
+                        now_iso(),
+                        service_model,
+                        billing_arrangement,
+                        client_status,
+                    ),
                 )
-                VALUES (%s, %s, %s, %s, %s)
-                RETURNING id
-                """,
-                (
-                    user_id,
-                    ad_account_id,
-                    page_id,
-                    business_name,
-                    now_iso(),
-                ),
-            )
+                row = cursor.fetchone()
 
-            row = cursor.fetchone()
+                if row is None:
+                    raise RuntimeError(
+                        "Client creation did not return an ID."
+                    )
 
-            if row is None:
-                raise RuntimeError("Client creation did not return an ID.")
+                return int(row["id"])
 
-            return int(row["id"])
+    except UniqueViolation as exc:
+        raise ValueError(
+            "This Ad Account ID is already registered in your workspace."
+        ) from exc
 
 
 def list_clients(user_id: int) -> list[dict]:
-    """List clients belonging to a user."""
+    """List clients belonging only to the specified user."""
     return _fetchall(
         """
         SELECT *
         FROM public.clients
         WHERE user_id = ?
-        ORDER BY created_at
+        ORDER BY created_at DESC, id DESC
         """,
         (user_id,),
     )
 
 
 def client_count(user_id: int) -> int:
-    """Count a user's clients."""
+    """Count a user's registered clients."""
     row = _fetchone(
         """
         SELECT COUNT(*) AS n
@@ -555,12 +603,11 @@ def client_count(user_id: int) -> int:
         """,
         (user_id,),
     )
-
     return int(row["n"]) if row else 0
 
 
 def remove_client(client_id: int, user_id: int) -> None:
-    """Remove a client only if it belongs to the specified user."""
+    """Delete a client only when it belongs to the specified user."""
     _execute(
         """
         DELETE FROM public.clients
@@ -627,4 +674,344 @@ def delete_user_sessions(user_id: int) -> None:
         "DELETE FROM public.sessions WHERE user_id = ?",
         (user_id,),
     )
+
+
+
+# ---------------------------------------------------------------------
+# Client-specific Meta connections
+# ---------------------------------------------------------------------
+
+def save_meta_connection(
+    user_id: int,
+    client_id: int,
+    ad_account_id: str,
+    encrypted_access_token: str,
+    meta_user_id: str | None = None,
+    meta_user_name: str | None = None,
+    ad_account_name: str | None = None,
+    token_expires_at: datetime | None = None,
+) -> int:
+    """Save a Meta connection only for a client owned by the user."""
+    from psycopg.errors import UniqueViolation
+
+    ad_account_id = (ad_account_id or "").strip()
+    encrypted_access_token = (encrypted_access_token or "").strip()
+
+    if not ad_account_id:
+        raise ValueError("Meta Ad Account ID is required.")
+
+    if not encrypted_access_token:
+        raise ValueError("Encrypted access token is required.")
+
+    try:
+        with _connect() as connection:
+            with connection.cursor() as cursor:
+                cursor.execute(
+                    """
+                    SELECT id
+                    FROM public.clients
+                    WHERE id = %s AND user_id = %s
+                    FOR UPDATE
+                    """,
+                    (client_id, user_id),
+                )
+
+                if cursor.fetchone() is None:
+                    raise ValueError(
+                        "Client not found in your workspace."
+                    )
+
+                # Keep the account ID used by existing campaign workflows
+                # synchronized with the account selected during Meta OAuth.
+                cursor.execute(
+                    """
+                    UPDATE public.clients
+                    SET ad_account_id = %s
+                    WHERE id = %s AND user_id = %s
+                    """,
+                    (ad_account_id, client_id, user_id),
+                )
+
+                cursor.execute(
+                    """
+                    INSERT INTO public.meta_connections (
+                        user_id,
+                        client_id,
+                        meta_user_id,
+                        meta_user_name,
+                        ad_account_id,
+                        ad_account_name,
+                        access_token_encrypted,
+                        token_expires_at,
+                        connected_at,
+                        updated_at,
+                        connection_status
+                    )
+                    VALUES (
+                        %s, %s, %s, %s, %s, %s, %s, %s,
+                        NOW(), NOW(), 'connected'
+                    )
+                    ON CONFLICT (client_id)
+                    DO UPDATE SET
+                        user_id = EXCLUDED.user_id,
+                        meta_user_id = EXCLUDED.meta_user_id,
+                        meta_user_name = EXCLUDED.meta_user_name,
+                        ad_account_id = EXCLUDED.ad_account_id,
+                        ad_account_name = EXCLUDED.ad_account_name,
+                        access_token_encrypted =
+                            EXCLUDED.access_token_encrypted,
+                        token_expires_at = EXCLUDED.token_expires_at,
+                        updated_at = NOW(),
+                        connection_status = 'connected'
+                    WHERE public.meta_connections.user_id =
+                        EXCLUDED.user_id
+                    RETURNING id
+                    """,
+                    (
+                        user_id,
+                        client_id,
+                        meta_user_id,
+                        meta_user_name,
+                        ad_account_id,
+                        ad_account_name,
+                        encrypted_access_token,
+                        token_expires_at,
+                    ),
+                )
+
+                row = cursor.fetchone()
+
+                if row is None:
+                    raise ValueError(
+                        "This client connection belongs to another workspace."
+                    )
+
+                return int(row["id"])
+
+    except UniqueViolation as exc:
+        raise ValueError(
+            "This Meta account conflicts with an existing connection."
+        ) from exc
+
+
+def get_meta_connection(
+    user_id: int,
+    client_id: int,
+) -> dict | None:
+    """Retrieve connection metadata only for a client owned by the user."""
+    return _fetchone(
+        """
+        SELECT
+            id,
+            user_id,
+            client_id,
+            meta_user_id,
+            meta_user_name,
+            ad_account_id,
+            ad_account_name,
+            token_expires_at,
+            connected_at,
+            updated_at,
+            connection_status
+        FROM public.meta_connections
+        WHERE user_id = ? AND client_id = ?
+        """,
+        (user_id, client_id),
+    )
+
+
+def get_meta_connection_for_token(
+    user_id: int,
+    client_id: int,
+) -> dict | None:
+    """Retrieve an encrypted token for a connection owned by the user."""
+    return _fetchone(
+        """
+        SELECT
+            id,
+            user_id,
+            client_id,
+            ad_account_id,
+            access_token_encrypted,
+            token_expires_at,
+            connection_status
+        FROM public.meta_connections
+        WHERE user_id = ? AND client_id = ?
+        """,
+        (user_id, client_id),
+    )
+
+
+def update_meta_connection_status(
+    user_id: int,
+    client_id: int,
+    status: str,
+) -> bool:
+    """Update connection status only within the owner's workspace."""
+    allowed_statuses = {
+        "connected",
+        "expired",
+        "revoked",
+        "error",
+    }
+
+    if status not in allowed_statuses:
+        raise ValueError("Invalid Meta connection status.")
+
+    result = _execute(
+        """
+        UPDATE public.meta_connections
+        SET connection_status = ?,
+            updated_at = NOW()
+        WHERE user_id = ? AND client_id = ?
+        """,
+        (status, user_id, client_id),
+    )
+
+    return result["rowcount"] > 0
+
+
+def remove_meta_connection(
+    user_id: int,
+    client_id: int,
+) -> bool:
+    """Remove a Meta connection only within the owner's workspace."""
+    result = _execute(
+        """
+        DELETE FROM public.meta_connections
+        WHERE user_id = ? AND client_id = ?
+        """,
+        (user_id, client_id),
+    )
+
+    return result["rowcount"] > 0
+
+
+def list_meta_connections(user_id: int) -> list[dict]:
+    """List connection metadata without returning access tokens."""
+    return _fetchall(
+        """
+        SELECT
+            id,
+            client_id,
+            meta_user_id,
+            meta_user_name,
+            ad_account_id,
+            ad_account_name,
+            token_expires_at,
+            connected_at,
+            updated_at,
+            connection_status
+        FROM public.meta_connections
+        WHERE user_id = ?
+        ORDER BY connected_at DESC
+        """,
+        (user_id,),
+    )
+
+
+# ---------------------------------------------------------------------
+# Meta OAuth state management
+# ---------------------------------------------------------------------
+
+META_OAUTH_STATE_TTL_MINUTES = 10
+
+
+def create_meta_oauth_state(user_id: int, client_id: int) -> str:
+    """
+    Generate a cryptographically random OAuth state and store its hash.
+
+    The client must belong to the authenticated user.
+    The raw state is returned to the caller but never stored in the DB.
+    """
+    if not isinstance(user_id, int) or user_id <= 0:
+        raise ValueError("Invalid user ID.")
+
+    if not isinstance(client_id, int) or client_id <= 0:
+        raise ValueError("Invalid client ID.")
+
+    state = secrets.token_urlsafe(32)
+    state_hash = hashlib.sha256(state.encode("utf-8")).hexdigest()
+
+    with _connect() as connection:
+        with connection.cursor() as cursor:
+            cursor.execute(
+                """
+                SELECT id
+                FROM public.clients
+                WHERE id = %s AND user_id = %s
+                """,
+                (client_id, user_id),
+            )
+
+            if cursor.fetchone() is None:
+                raise ValueError("Client not found in your workspace.")
+
+            cursor.execute(
+                """
+                INSERT INTO public.meta_oauth_states (
+                    state_hash,
+                    user_id,
+                    client_id,
+                    created_at,
+                    expires_at
+                )
+                VALUES (
+                    %s,
+                    %s,
+                    %s,
+                    NOW(),
+                    NOW() + (%s * INTERVAL '1 minute')
+                )
+                """,
+                (
+                    state_hash,
+                    user_id,
+                    client_id,
+                    META_OAUTH_STATE_TTL_MINUTES,
+                ),
+            )
+
+    return state
+
+
+def consume_meta_oauth_state(state: str) -> dict | None:
+    """
+    Atomically consume a valid, unexpired OAuth state.
+
+    Returns its user_id and client_id once, or None if invalid,
+    expired, or already consumed.
+    """
+    if not isinstance(state, str) or not state or len(state) > 512:
+        return None
+
+    state_hash = hashlib.sha256(state.encode("utf-8")).hexdigest()
+
+    with _connect() as connection:
+        with connection.cursor() as cursor:
+            cursor.execute(
+                """
+                DELETE FROM public.meta_oauth_states
+                WHERE state_hash = %s
+                  AND expires_at > NOW()
+                RETURNING user_id, client_id
+                """,
+                (state_hash,),
+            )
+
+            row = cursor.fetchone()
+
+    return dict(row) if row is not None else None
+
+
+def cleanup_meta_oauth_states() -> int:
+    """Delete expired OAuth state records and return the deleted count."""
+    result = _execute(
+        """
+        DELETE FROM public.meta_oauth_states
+        WHERE expires_at <= NOW()
+        """
+    )
+
+    return result["rowcount"]
 
