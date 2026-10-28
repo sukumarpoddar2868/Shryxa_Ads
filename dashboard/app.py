@@ -8,7 +8,17 @@ Handles Meta OAuth callbacks before normal page navigation.
 """
 
 from __future__ import annotations
+from auth import auth as auth_mod
+from auth import db as db_mod
+import logging
 
+logger = logging.getLogger(__name__)
+
+logger.warning(
+    "META_OAUTH_DIAGNOSTIC db_file=%s has_consume_state=%s",
+    getattr(db_mod, "__file__", "unknown"),
+    hasattr(db_mod, "consume_meta_oauth_state"),
+)
 import sys
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
