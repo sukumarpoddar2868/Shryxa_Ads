@@ -6,7 +6,15 @@ import { z } from "zod";
 import { requireUser } from "@/features/auth/dal";
 import { metaEnv } from "@/lib/env";
 import { applyAssetSelection, type AssetFormState } from "@/features/meta-connect/assets";
-import { createInvite, disconnectClient, markInviteUsed, resolveInvite } from "@/features/meta-connect/store";
+import {
+  createInvite,
+  disconnectClient,
+  linkClientToBusiness,
+  markInviteUsed,
+  removeBusinessConnection,
+  resolveInvite,
+} from "@/features/meta-connect/store";
+import { importClients, type ImportState } from "./import";
 import {
   BILLING_ARRANGEMENTS,
   ClientLimitError,
@@ -116,4 +124,37 @@ export async function saveInviteAssetsAction(token: string, _prev: AssetFormStat
     revalidatePath(`/clients/${invite.clientId}`);
   }
   return res;
+}
+
+/* ------------------------------------------- Business Manager (path B) */
+
+async function requireAgency() {
+  const user = await requireUser();
+  if (user.accountType !== "agency") redirect("/clients");
+  return user;
+}
+
+export async function importClientsAction(connectionId: number, _prev: ImportState, form: FormData): Promise<ImportState> {
+  const user = await requireAgency();
+  const res = await importClients(user, connectionId, form);
+  revalidatePath("/clients");
+  revalidatePath(`/clients/business/${connectionId}`);
+  return res;
+}
+
+export async function linkBusinessAction(clientId: number, form: FormData) {
+  const { user, client } = await ownedClient(clientId);
+  if (user.accountType !== "agency") return;
+  const connectionId = Number(form.get("connectionId"));
+  // Drop the client's own login (if any) before switching to the shared one.
+  if (client.meta_connection_id) await disconnectClient(user.id, client.id, client.meta_connection_id);
+  await linkClientToBusiness(user.id, client.id, connectionId);
+  revalidatePath(`/clients/${clientId}`);
+}
+
+export async function removeBusinessAction(connectionId: number) {
+  const user = await requireAgency();
+  await removeBusinessConnection(user.id, connectionId);
+  revalidatePath("/clients");
+  redirect("/clients");
 }

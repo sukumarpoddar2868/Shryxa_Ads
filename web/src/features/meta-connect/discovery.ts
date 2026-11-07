@@ -1,6 +1,23 @@
 import "server-only";
 import { graphGet, graphList, MetaApiError } from "@/lib/meta/graph";
 
+/* Permissions our Login-for-Business configs must grant. */
+export const REQUIRED_SCOPES = ["ads_management", "ads_read", "business_management", "pages_show_list", "pages_read_engagement"] as const;
+export const RECOMMENDED_SCOPES = ["pages_manage_ads", "leads_retrieval", "instagram_basic"] as const;
+
+/** Required permissions missing from a saved grant (null grant = unknown → none reported). */
+export function missingScopes(granted: string[] | null | undefined): string[] {
+  if (!granted || granted.length === 0) return [];
+  return REQUIRED_SCOPES.filter((s) => !granted.includes(s));
+}
+
+export function permissionMessage(missing: string[], where: "business" | "client"): string {
+  const config = where === "business" ? "Agency (system-user) Login for Business configuration" : "Login for Business configuration";
+  return missing.length
+    ? `Facebook didn't grant: ${missing.join(", ")}. Add ${missing.length === 1 ? "it" : "them"} to your ${config} in the Meta app, then Reconnect.`
+    : `Facebook refused access to the ad accounts. Check the ${config} includes ad account assets and ads permissions, then Reconnect and tick the ad accounts.`;
+}
+
 /* Shapes returned to pages — narrow and serialisable (no tokens). */
 
 export type AdAccountOption = {

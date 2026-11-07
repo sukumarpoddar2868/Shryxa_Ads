@@ -93,7 +93,7 @@ export type MetaOAuthStateRow = {
   id: number;
   state_hash: string;
   user_id: number;
-  client_id: number;
+  client_id: number | null;
   created_at: string;
   expires_at: string;
   flow: "owner" | "invite" | "business";

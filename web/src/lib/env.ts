@@ -25,6 +25,12 @@ const MetaEnvSchema = z.object({
   META_APP_ID: z.string().min(5),
   META_APP_SECRET: z.string().min(10),
   META_LOGIN_CONFIG_ID: z.string().min(5),
+  // Optional second Login-for-Business config with a *system-user* token
+  // (never expires) for agencies connecting a whole Business Manager.
+  META_BUSINESS_CONFIG_ID: z
+    .string()
+    .optional()
+    .transform((v) => v?.trim() || undefined),
   META_API_VERSION: z.string().regex(/^v\d+\.\d+$/).default("v23.0"),
   META_TOKEN_ENCRYPTION_KEY: z.string().length(44),
 });

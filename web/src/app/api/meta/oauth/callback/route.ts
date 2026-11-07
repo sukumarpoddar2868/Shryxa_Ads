@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { cookies } from "next/headers";
-import { consumeOAuthState, saveClientConnection } from "@/features/meta-connect/store";
+import { consumeOAuthState, saveBusinessConnection, saveClientConnection } from "@/features/meta-connect/store";
+import { metaEnv } from "@/lib/env";
 import { exchangeCode, graphGet, grantedScopes, MetaApiError } from "@/lib/meta/graph";
 import { INVITE_COOKIE } from "@/features/meta-connect/constants";
 
@@ -22,7 +23,12 @@ export async function GET(request: NextRequest) {
   const flow = state ? await consumeOAuthState(state) : null;
   if (!flow) return go(fallback, "meta_error=expired_state");
 
-  const home = flow.flow === "invite" && inviteToken ? `/connect/${inviteToken}` : `/clients/${flow.clientId}`;
+  const home =
+    flow.flow === "business"
+      ? "/clients"
+      : flow.flow === "invite" && inviteToken
+        ? `/connect/${inviteToken}`
+        : `/clients/${flow.clientId}`;
 
   if (p.get("error")) return go(home, "meta_error=denied");
   const code = p.get("code");
@@ -34,6 +40,25 @@ export async function GET(request: NextRequest) {
       graphGet<{ id: string; name: string }>("me", token, { fields: "id,name" }),
       grantedScopes(token).catch(() => [] as string[]),
     ]);
+
+    if (flow.flow === "business") {
+      const businesses = await graphGet<{ data?: { id: string; name: string }[] }>("me/businesses", token, { fields: "id,name" }).catch(
+        () => ({ data: [] }),
+      );
+      const id = await saveBusinessConnection({
+        userId: flow.userId,
+        metaUserId: me.id,
+        metaUserName: businesses.data?.[0]?.name ?? me.name,
+        token,
+        expiresAt,
+        scopes,
+        // The business config issues non-expiring system-user tokens.
+        tokenType: metaEnv().META_BUSINESS_CONFIG_ID ? "system_user" : "user",
+        businessId: businesses.data?.[0]?.id ?? null,
+      });
+      return go(`/clients/business/${id}`, "connected=1");
+    }
+
     await saveClientConnection({
       userId: flow.userId,
       clientId: flow.clientId,

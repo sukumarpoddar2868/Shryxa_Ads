@@ -7,7 +7,9 @@ import { decryptToken, encryptToken, newSecret, sha256 } from "./secrets";
 
 const STATE_TTL_MIN = 15;
 
-export type OAuthFlow = { flow: "owner" | "invite"; userId: number; clientId: number; inviteId?: number };
+export type OAuthFlow =
+  | { flow: "owner" | "invite"; userId: number; clientId: number; inviteId?: number }
+  | { flow: "business"; userId: number };
 
 export async function createOAuthState(f: OAuthFlow): Promise<string> {
   const state = newSecret();
@@ -16,9 +18,9 @@ export async function createOAuthState(f: OAuthFlow): Promise<string> {
     .insert({
       state_hash: sha256(state),
       user_id: f.userId,
-      client_id: f.clientId,
+      client_id: f.flow === "business" ? null : f.clientId,
       flow: f.flow,
-      invite_id: f.inviteId ?? null,
+      invite_id: f.flow === "invite" ? (f.inviteId ?? null) : null,
       expires_at: new Date(Date.now() + STATE_TTL_MIN * 60_000).toISOString(),
     });
   if (error) throw new Error(`Could not start Meta login: ${error.message}`);
@@ -34,7 +36,9 @@ export async function consumeOAuthState(state: string): Promise<OAuthFlow | null
     .gt("expires_at", new Date().toISOString())
     .select("user_id, client_id, flow, invite_id")
     .maybeSingle();
-  if (!data || data.flow === "business") return null;
+  if (!data) return null;
+  if (data.flow === "business") return { flow: "business", userId: data.user_id };
+  if (data.client_id === null) return null;
   return { flow: data.flow, userId: data.user_id, clientId: data.client_id, inviteId: data.invite_id ?? undefined };
 }
 
@@ -103,7 +107,15 @@ export async function getConnectionToken(userId: number, connectionId: number): 
     .eq("user_id", userId)
     .maybeSingle();
   if (!data || data.connection_status !== "connected") return null;
-  return decryptToken(data.access_token_encrypted);
+  try {
+    return decryptToken(data.access_token_encrypted);
+  } catch {
+    // Corrupt token or a changed META_TOKEN_ENCRYPTION_KEY: never crash the
+    // page — flag the connection so the UI asks for a reconnect.
+    console.error("META_TOKEN_DECRYPT_FAILED", { connectionId });
+    await markConnection(userId, connectionId, "error");
+    return null;
+  }
 }
 
 export async function markConnection(userId: number, connectionId: number, status: MetaConnectionRow["connection_status"]) {
@@ -114,26 +126,129 @@ export async function markConnection(userId: number, connectionId: number, statu
     .eq("user_id", userId);
 }
 
-/** Disconnect = delete the stored token and clear the client's chosen assets. */
+const CLEARED_ASSETS = {
+  meta_connection_id: null,
+  ad_account_id: null,
+  ad_account_name: null,
+  page_id: null,
+  page_name: null,
+  instagram_actor_id: null,
+  instagram_username: null,
+  pixel_id: null,
+  pixel_name: null,
+  assets_updated_at: null,
+  client_status: "pending_access" as const,
+};
+
+/**
+ * Disconnect a client. Its own login (owner/invite) is deleted; a shared
+ * Business Manager connection is only unlinked — other clients keep using it.
+ */
 export async function disconnectClient(userId: number, clientId: number, connectionId: number | null) {
-  if (connectionId) await db().from("meta_connections").delete().eq("id", connectionId).eq("user_id", userId);
+  if (connectionId) {
+    await db().from("meta_connections").delete().eq("id", connectionId).eq("user_id", userId).eq("client_id", clientId);
+  }
+  await db().from("clients").update(CLEARED_ASSETS).eq("id", clientId).eq("user_id", userId);
+}
+
+/* ------------------------------------------- Business Manager (path B) */
+
+export async function saveBusinessConnection(input: {
+  userId: number;
+  metaUserId: string;
+  metaUserName: string;
+  token: string;
+  expiresAt: Date | null;
+  scopes: string[];
+  tokenType: "user" | "system_user";
+  businessId: string | null;
+}): Promise<number> {
+  const now = new Date().toISOString();
+  const row = {
+    user_id: input.userId,
+    client_id: null,
+    source: "business" as const,
+    token_type: input.tokenType,
+    meta_user_id: input.metaUserId,
+    meta_user_name: input.metaUserName,
+    meta_business_id: input.businessId,
+    access_token_encrypted: encryptToken(input.token),
+    token_expires_at: input.expiresAt?.toISOString() ?? null,
+    granted_scopes: input.scopes,
+    connection_status: "connected" as const,
+    updated_at: now,
+  };
+  // Reconnecting the same Business Manager refreshes the existing row.
+  const { data: existing } = await db()
+    .from("meta_connections")
+    .select("id")
+    .eq("user_id", input.userId)
+    .eq("source", "business")
+    .eq("meta_user_id", input.metaUserId)
+    .maybeSingle();
+  if (existing) {
+    const { error } = await db().from("meta_connections").update(row).eq("id", existing.id);
+    if (error) throw new Error(`Could not save Business Manager connection: ${error.message}`);
+    return existing.id;
+  }
+  const { data, error } = await db()
+    .from("meta_connections")
+    .insert({ ...row, connected_at: now })
+    .select("id")
+    .single();
+  if (error || !data) throw new Error(`Could not save Business Manager connection: ${error?.message}`);
+  return data.id;
+}
+
+export type BusinessConnection = Pick<
+  MetaConnectionRow,
+  "id" | "meta_user_name" | "meta_business_id" | "connected_at" | "token_expires_at" | "token_type" | "connection_status"
+> & { clientCount: number };
+
+export async function listBusinessConnections(userId: number): Promise<BusinessConnection[]> {
+  const [{ data: conns }, { data: clients }] = await Promise.all([
+    db()
+      .from("meta_connections")
+      .select("id, meta_user_name, meta_business_id, connected_at, token_expires_at, token_type, connection_status")
+      .eq("user_id", userId)
+      .eq("source", "business")
+      .order("id"),
+    db().from("clients").select("meta_connection_id").eq("user_id", userId).not("meta_connection_id", "is", null),
+  ]);
+  return (conns ?? []).map((c) => ({
+    ...c,
+    clientCount: (clients ?? []).filter((x) => x.meta_connection_id === c.id).length,
+  }));
+}
+
+export async function getBusinessConnection(userId: number, connectionId: number) {
+  if (!Number.isSafeInteger(connectionId)) return null;
+  const { data } = await db()
+    .from("meta_connections")
+    .select("id, meta_user_name, meta_business_id, connection_status, token_type, token_expires_at, granted_scopes")
+    .eq("id", connectionId)
+    .eq("user_id", userId)
+    .eq("source", "business")
+    .maybeSingle();
+  return data;
+}
+
+/** Point a client at a Business Manager connection (assets are picked after). */
+export async function linkClientToBusiness(userId: number, clientId: number, connectionId: number): Promise<boolean> {
+  const conn = await getBusinessConnection(userId, connectionId);
+  if (!conn) return false;
   await db()
     .from("clients")
-    .update({
-      meta_connection_id: null,
-      ad_account_id: null,
-      ad_account_name: null,
-      page_id: null,
-      page_name: null,
-      instagram_actor_id: null,
-      instagram_username: null,
-      pixel_id: null,
-      pixel_name: null,
-      assets_updated_at: null,
-      client_status: "pending_access",
-    })
+    .update({ ...CLEARED_ASSETS, meta_connection_id: connectionId })
     .eq("id", clientId)
     .eq("user_id", userId);
+  return true;
+}
+
+/** Remove a Business Manager connection and unlink every client using it. */
+export async function removeBusinessConnection(userId: number, connectionId: number) {
+  await db().from("clients").update(CLEARED_ASSETS).eq("user_id", userId).eq("meta_connection_id", connectionId);
+  await db().from("meta_connections").delete().eq("id", connectionId).eq("user_id", userId).eq("source", "business");
 }
 
 /* ---------------------------------------------------------- Invites */

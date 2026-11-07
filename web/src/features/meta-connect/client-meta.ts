@@ -6,6 +6,8 @@ import {
   buildReadiness,
   discoverAssets,
   listPixels,
+  missingScopes,
+  permissionMessage,
   type AccountHealth,
   type Discovery,
   type PixelOption,
@@ -44,11 +46,20 @@ export async function loadClientMeta(userId: number, client: Client): Promise<Cl
   });
 
   if (!connection || connection.connection_status !== "connected") {
-    return empty(connection ? "This Facebook connection has expired. Reconnect to continue." : null);
+    return empty(
+      !connection
+        ? null
+        : connection.connection_status === "error"
+          ? "We couldn't read the saved Facebook login. Please reconnect."
+          : "This Facebook connection has expired. Reconnect to continue.",
+    );
   }
 
+  const missing = missingScopes(connection.granted_scopes);
+  if (missing.length) return empty(permissionMessage(missing, connection.source === "business" ? "business" : "client"));
+
   const token = await getConnectionToken(userId, connection.id);
-  if (!token) return empty("This Facebook connection has expired. Reconnect to continue.");
+  if (!token) return empty("We couldn't read the saved Facebook login. Please reconnect.", { ...connection, connection_status: "error" });
 
   try {
     const [discovery, pixels, healthResult] = await Promise.all([
@@ -87,6 +98,9 @@ export async function loadClientMeta(userId: number, client: Client): Promise<Cl
       });
     }
     console.error("META_DISCOVERY_FAILED", e instanceof MetaApiError ? { code: e.code, message: e.message } : e);
+    if (e instanceof MetaApiError && e.isPermissionError) {
+      return empty(permissionMessage([], connection.source === "business" ? "business" : "client"));
+    }
     return empty("We couldn't reach Meta just now. Refresh in a moment.");
   }
 }
@@ -100,4 +114,5 @@ export const META_ERRORS: Record<string, string> = {
   invite_expired: "This invite link has expired. Ask for a new one.",
   invite_used: "This invite was already completed.",
   unknown_client: "That client wasn't found.",
+  agency_only: "Business Manager connect is for agency accounts.",
 };

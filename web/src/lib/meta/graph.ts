@@ -19,6 +19,10 @@ export class MetaApiError extends Error {
     super(message);
     this.name = "MetaApiError";
   }
+  /** The login works but lacks a permission or asset access (#200, #10, #2xx). */
+  get isPermissionError(): boolean {
+    return this.code === 10 || (this.code !== undefined && this.code >= 200 && this.code < 300);
+  }
   /** Token expired, revoked, or password changed → user must reconnect. */
   get isAuthError(): boolean {
     return this.code === 190 || (this.type === "OAuthException" && this.code === 102);
@@ -82,12 +86,12 @@ export async function graphList<T>(path: string, token: string, params: Params =
 export const oauthRedirectUri = () => `${metaEnv().APP_URL}/api/meta/oauth/callback`;
 
 /** Facebook Login for Business dialog. Permissions come from the config_id. */
-export function buildLoginUrl(state: string): string {
+export function buildLoginUrl(state: string, configId?: string): string {
   const { META_APP_ID, META_LOGIN_CONFIG_ID, META_API_VERSION } = metaEnv();
   const url = new URL(`https://www.facebook.com/${META_API_VERSION}/dialog/oauth`);
   url.searchParams.set("client_id", META_APP_ID);
   url.searchParams.set("redirect_uri", oauthRedirectUri());
-  url.searchParams.set("config_id", META_LOGIN_CONFIG_ID);
+  url.searchParams.set("config_id", configId ?? META_LOGIN_CONFIG_ID);
   url.searchParams.set("response_type", "code");
   url.searchParams.set("override_default_response_type", "true");
   url.searchParams.set("state", state);

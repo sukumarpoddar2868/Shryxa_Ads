@@ -6,7 +6,9 @@ import { Button, ButtonLink } from "@/components/ui/button";
 import { Callout, Card, Chip } from "@/components/ui/surface";
 import { requireUser } from "@/features/auth/dal";
 import { getClient } from "@/features/clients/data";
-import { deleteClientAction, disconnectAction, saveAssetsAction } from "@/features/clients/actions";
+import { deleteClientAction, disconnectAction, linkBusinessAction, saveAssetsAction } from "@/features/clients/actions";
+import { Select } from "@/components/ui/field";
+import { listBusinessConnections } from "@/features/meta-connect/store";
 import { AssetPicker } from "@/features/clients/components/asset-picker";
 import { InviteLink } from "@/features/clients/components/invite-link";
 import { ReadinessList } from "@/features/clients/components/readiness";
@@ -25,7 +27,11 @@ export default async function ClientPage({ params, searchParams }: PageProps<"/c
   if (!client) notFound();
 
   const isAgency = user.accountType === "agency";
-  const meta = metaConfigured() ? await loadClientMeta(user.id, client) : null;
+  const [meta, businesses] = await Promise.all([
+    metaConfigured() ? loadClientMeta(user.id, client) : Promise.resolve(null),
+    isAgency ? listBusinessConnections(user.id) : Promise.resolve([]),
+  ]);
+  const liveBusinesses = businesses.filter((b) => b.connection_status === "connected");
   const conn = meta?.connection ?? null;
   const connected = conn?.connection_status === "connected";
   const startUrl = `/api/meta/oauth/start?client=${client.id}`;
@@ -60,13 +66,19 @@ export default async function ClientPage({ params, searchParams }: PageProps<"/c
         {connected && conn ? (
           <div className="mt-4 flex flex-wrap items-center justify-between gap-4">
             <p className="text-[15px] text-ink-muted">
-              Connected as <strong className="text-ink">{conn.meta_user_name}</strong>
+              {conn.source === "business" ? "Using Business Manager " : "Connected as "}
+              <strong className="text-ink">{conn.meta_user_name}</strong>
               {conn.source === "invite" && " (via invite link)"} · since {fmtDate(conn.connected_at)}
               {conn.token_expires_at && <> · renews by {fmtDate(conn.token_expires_at)}</>}
             </p>
             <div className="flex flex-wrap gap-2">
-              <ButtonLink href={startUrl} variant="secondary" size="sm" prefetch={false}>
-                <RefreshCw className="size-4" aria-hidden /> Reconnect
+              <ButtonLink
+                href={conn.source === "business" ? `/clients/business/${conn.id}` : startUrl}
+                variant="secondary"
+                size="sm"
+                prefetch={false}
+              >
+                <RefreshCw className="size-4" aria-hidden /> {conn.source === "business" ? "Manage Business Manager" : "Reconnect"}
               </ButtonLink>
               <form action={disconnectAction.bind(null, client.id)}>
                 <Button variant="danger" size="sm" type="submit">
@@ -95,6 +107,26 @@ export default async function ClientPage({ params, searchParams }: PageProps<"/c
                 </p>
                 <InviteLink clientId={client.id} businessName={client.business_name ?? "your business"} />
               </div>
+            )}
+            {isAgency && !client.is_self && liveBusinesses.length > 0 && (
+              <form action={linkBusinessAction.bind(null, client.id)} className="rounded-[10px] bg-chartreuse-soft p-5 md:col-span-2">
+                <p className="text-[15px] font-bold">Or use your Business Manager</p>
+                <p className="mb-4 mt-1 text-[14px] text-ink-muted">
+                  Pick from the ad accounts and Pages your Business Manager already has access to.
+                </p>
+                <div className="flex flex-wrap gap-3">
+                  <Select name="connectionId" defaultValue={String(liveBusinesses[0].id)} className="max-w-xs" aria-label="Business Manager">
+                    {liveBusinesses.map((b) => (
+                      <option key={b.id} value={b.id}>
+                        {b.meta_user_name}
+                      </option>
+                    ))}
+                  </Select>
+                  <Button type="submit" variant="secondary">
+                    Use this Business Manager
+                  </Button>
+                </div>
+              </form>
             )}
           </div>
         )}
@@ -139,7 +171,10 @@ export default async function ClientPage({ params, searchParams }: PageProps<"/c
         <Card className="flex flex-wrap items-center justify-between gap-4">
           <div>
             <h2 className="text-[17px] font-extrabold">Remove client</h2>
-            <p className="text-[14px] text-ink-muted">Deletes the client and its stored Facebook token. Ads on Meta are not touched.</p>
+            <p className="text-[14px] text-ink-muted">
+              Deletes the client (and its own Facebook login, if any). Shared Business Manager connections stay. Ads on Meta are
+              not touched.
+            </p>
           </div>
           <form action={deleteClientAction.bind(null, client.id)}>
             <Button variant="danger" size="sm" type="submit">

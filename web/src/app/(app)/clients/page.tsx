@@ -1,20 +1,25 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { ArrowRight, Plus } from "lucide-react";
-import { Card, Chip } from "@/components/ui/surface";
+import { ArrowRight, Building2, Plus } from "lucide-react";
+import { ButtonLink } from "@/components/ui/button";
+import { Callout, Card, Chip } from "@/components/ui/surface";
+import { listBusinessConnections } from "@/features/meta-connect/store";
+import { META_ERRORS } from "@/features/meta-connect/client-meta";
 import { requireUser } from "@/features/auth/dal";
 import { BILLING_ARRANGEMENTS, SERVICE_MODELS, ensureSelfClient, listClients, type Client } from "@/features/clients/data";
 import { AddClientForm } from "@/features/clients/components/add-client-form";
 
 export const metadata: Metadata = { title: "Clients" };
 
-export default async function ClientsPage() {
+export default async function ClientsPage({ searchParams }: PageProps<"/clients">) {
+  const sp = await searchParams;
   const user = await requireUser();
   // Business owners have exactly one client — go straight to it.
   if (user.accountType === "business") redirect(`/clients/${await ensureSelfClient(user)}`);
 
-  const clients = await listClients(user.id);
+  const [clients, businesses] = await Promise.all([listClients(user.id), listBusinessConnections(user.id)]);
+  const errKey = typeof sp.meta_error === "string" ? sp.meta_error : null;
   const atLimit = clients.length >= user.clientLimit;
 
   return (
@@ -28,6 +33,46 @@ export default async function ClientsPage() {
           {clients.length} / {user.clientLimit} clients on your plan
         </Chip>
       </header>
+
+      {errKey && <Callout tone="error">{META_ERRORS[errKey] ?? "Something went wrong with Facebook login."}</Callout>}
+
+      <Card className="relative overflow-hidden">
+        <div aria-hidden className="pattern-dots absolute inset-y-0 right-0 w-1/3 text-lavender-deep/[0.12] [mask-image:linear-gradient(90deg,transparent,black)]" />
+        <div className="relative flex flex-wrap items-start justify-between gap-4">
+          <div className="max-w-xl">
+            <h2 className="flex items-center gap-2 text-[19px] font-extrabold">
+              <Building2 className="size-5" aria-hidden /> Business Manager
+            </h2>
+            <p className="mt-1 text-[15px] text-ink-muted">
+              Already have partner access to your clients&apos; ad accounts? Connect your Business Manager once and import them
+              as clients — no invite links needed.
+            </p>
+          </div>
+          <ButtonLink href="/api/meta/oauth/start?business=1" variant={businesses.length ? "secondary" : "primary"} prefetch={false}>
+            {businesses.length ? "Connect another" : "Connect Business Manager"}
+          </ButtonLink>
+        </div>
+        {businesses.length > 0 && (
+          <ul className="relative mt-5 flex flex-wrap gap-3">
+            {businesses.map((b) => (
+              <li key={b.id}>
+                <Link
+                  href={`/clients/business/${b.id}`}
+                  className="flex items-center gap-3 rounded-pill bg-lavender-soft py-2 pl-4 pr-2 text-[14px] font-bold hover:bg-lavender"
+                >
+                  {b.meta_user_name}
+                  <span className="text-[13px] font-normal text-ink-muted">
+                    {b.clientCount} client{b.clientCount === 1 ? "" : "s"}
+                  </span>
+                  <Chip tone={b.connection_status === "connected" ? "active" : "stopped"}>
+                    {b.connection_status === "connected" ? "Import →" : "Expired"}
+                  </Chip>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        )}
+      </Card>
 
       <div className="grid gap-6 lg:grid-cols-[1fr_380px]">
         <section aria-label="Your clients">
