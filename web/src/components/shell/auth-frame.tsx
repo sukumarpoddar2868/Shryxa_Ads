@@ -7,7 +7,7 @@ export function AuthFrame({ title, subtitle, children }: { title: string; subtit
   return (
     <main className="grid min-h-dvh lg:grid-cols-[1.1fr_1fr]">
       <aside className="mesh-hero grain relative hidden flex-col justify-between overflow-hidden p-12 lg:flex">
-        <Link href="/" aria-label="shryxa home">
+        <Link href="/" aria-label="Shryxa Ads home">
           <Wordmark className="text-[34px] text-ink" />
         </Link>
         <div className="max-w-md">
@@ -27,7 +27,7 @@ export function AuthFrame({ title, subtitle, children }: { title: string; subtit
 
       <section className="flex items-center justify-center bg-paper px-4 py-12 sm:px-8">
         <div className="w-full max-w-sm">
-          <Link href="/" className="mb-10 inline-block lg:hidden" aria-label="shryxa home">
+          <Link href="/" className="mb-10 inline-block lg:hidden" aria-label="Shryxa Ads home">
             <Wordmark className="text-[29px]" />
           </Link>
           <h1 className="text-[29px] font-extrabold leading-tight">{title}</h1>

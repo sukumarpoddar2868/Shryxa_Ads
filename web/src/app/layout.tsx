@@ -9,7 +9,7 @@ const manrope = Manrope({
 });
 
 export const metadata: Metadata = {
-  title: { default: "shryxa ads", template: "%s · shryxa ads" },
+  title: { default: "Shryxa Ads — launch Meta ads for every client", template: "%s · Shryxa Ads" },
   description: "Launch and manage Meta ad campaigns for every client, from one place.",
 };
 

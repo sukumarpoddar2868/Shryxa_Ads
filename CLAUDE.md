@@ -25,7 +25,7 @@ DB tables (public, Supabase): `users`, `subscriptions`, `clients`, `sessions`, M
 - Feature-based structure: `src/features/{auth,billing,clients,meta-connect,campaigns,ai}`, `src/lib/{supabase,meta-graph}`, thin pages in `src/app/(public|app)`, `api/meta/oauth/callback`, `api/webhooks/razorpay`.
 
 ## Design system — "catalog brochure", 3-color
-Style DNA (from user's reference): bold full-bleed color bands stacked vertically, flat borderless cards, pill CTAs with the only shadow, one geometric sans, oversized **lowercase** wordmark `shryxa` (800). Feels like a printed product catalog, not generic SaaS. Base = **Lavender + Chartreuse + Tomato**, layered as "complex texture" (grain + soft mesh gradients). Tokens live in `web/src/app/globals.css` (`@theme`) — use tokens, never raw hex in components.
+Style DNA (from user's reference): bold full-bleed color bands stacked vertically, flat borderless cards, pill CTAs with the only shadow, one geometric sans, oversized **lowercase** wordmark `shryxa ads.` (800; brand name in prose = "Shryxa Ads"). Feels like a printed product catalog, not generic SaaS. Base = **Lavender + Chartreuse + Tomato**, layered as "complex texture" (grain + soft mesh gradients). Tokens live in `web/src/app/globals.css` (`@theme`) — use tokens, never raw hex in components.
 
 | Token | Hex | Role |
 |---|---|---|
@@ -48,6 +48,7 @@ Rules
 - Destructive actions (stop campaign, delete client): ink outline button + `tomato-700` text + confirm dialog — not a filled red button.
 - Status chips: ACTIVE chartreuse, PAUSED lavender, STOPPED/ERROR tomato-soft (ink text).
 - Radii: buttons/tags/chips = full pill; cards 4px; inputs 6px. Shadow `0 2px 8px rgb(0 0 0/.15)` only on CTA pills. Cards flat, no border (separate by surface color).
+- Patterns (globals.css utilities, colour via text-*): `pattern-dots|grid|stripes|checker|rings|squiggle`. Motion utilities: `animate-marquee|float|ring|spin-slow|caret|word`; scroll reveal via `<Reveal>`; all disabled under prefers-reduced-motion. Landing only — keep app interior calm.
 - Texture: subtle SVG grain overlay (~6% opacity) on bands + radial mesh gradients mixing the 3 hues on hero/auth. Keep data areas clean (no texture under tables/charts).
 - Type: Manrope (Roobert substitute) 400/700/800, tracking -0.007em. Marketing/public: brochure scale (body 20–22px, hero 68px+). App interior: dense scale (body 15px, labels 13px, headings 20–32px). Line-height display 1.0, body 1.4.
 - Layout: public pages = full-bleed alternating bands (lavender → chartreuse → paper → ink footer), 1200px max, ~640px text measure. App = ink sidebar (chartreuse active pill) + lavender-soft content area. Base spacing unit 4px, section padding 60–120px.
@@ -61,6 +62,7 @@ Run: `cd web && pnpm dev` · check: `pnpm lint && pnpm build`. Env: copy `web/.e
 - DB: `lib/supabase/server.ts` `db()` (service role, server-only). `lib/supabase/types.ts` is hand-written → replace with generated types.
 - Env: only via `lib/env.ts` (Zod).
 - UI kit: `components/ui/{button,field,surface}.tsx` (Button/ButtonLink variants primary|secondary|ghost|danger|invert; Input/Select/Field; Card/Chip/Callout/Band), `components/brand/wordmark.tsx`, `components/shell/{auth-frame,sidebar-nav}.tsx`. Texture utilities: `grain`, `mesh-hero`, `mesh-soft`.
+- Landing: `features/marketing/sections.tsx` (Hero, IndustryMarquee, Contrast, HowItWorks, Features bento, Placements carousel, Facts, Audiences carousel, Plans (limits only — no prices invented), Faq, FinalCta, SiteFooter) + `components/{motion,carousel,site-nav,ad-mockups}.tsx`. Mockups use fictional "Bloom Café"; no fake testimonials/metrics/logos.
 - Routes: `(public)/` → `/`, `/login`, `/signup`; `(app)/` → `/dashboard` (placeholder KPIs). Proxy guards `/dashboard|campaigns|clients|account|admin`.
 
 ## Phases
@@ -85,4 +87,5 @@ Run: `cd web && pnpm dev` · check: `pnpm lint && pnpm build`. Env: copy `web/.e
   - Auth verified end-to-end in headless Chrome (wrong pw, admin login, logout, proxy redirect, signup validation, duplicate email, new signup → trialing). E2E script lives in scratchpad only (not committed).
   - Note: use `pnpm run <script>` (pnpm 12 rejects `pnpm -s`).
   - 2026-11-08: committed `f0678d4` on main (web/ + CLAUDE.md only; user's Python OAuth edits + .bak files intentionally left uncommitted). Push failed from Claude's shell (no GitHub credentials) → user pushes manually. Deploy: Vercel, Root Directory `web`, env SUPABASE_URL + SUPABASE_SERVICE_ROLE_KEY. If pnpm install fails on Vercel (packageManager pnpm@12), add env ENABLE_EXPERIMENTAL_COREPACK=1.
-  - Phase 1 TODO: port policy pages (privacy/terms/refund/service) + footer links; then Phase 2 (clients + Meta OAuth).
+  - 2026-11-08: deployed on Vercel by user. Landing rebuilt as long page (12 sections, marquees, 2 carousels, bento, patterns, animations); wordmark → `shryxa ads.`; titles "Shryxa Ads". Verified desktop+mobile, no console errors/overflow. Not yet committed.
+  - Phase 1 TODO: port policy pages (privacy/terms/refund/service) + add Legal column to landing footer; then Phase 2 (clients + Meta OAuth).

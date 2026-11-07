@@ -14,7 +14,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   return (
     <div className="flex min-h-dvh flex-col bg-lavender-soft md:flex-row">
       <aside className="flex shrink-0 items-center justify-between gap-4 bg-ink px-4 py-3 text-paper md:sticky md:top-0 md:h-dvh md:w-60 md:flex-col md:items-stretch md:justify-start md:px-4 md:py-6">
-        <Link href="/dashboard" className="px-2 md:mb-8" aria-label="shryxa dashboard">
+        <Link href="/dashboard" className="px-2 md:mb-8" aria-label="Shryxa Ads dashboard">
           <Wordmark className="text-[26px] text-paper" />
         </Link>
         <SidebarNav />
