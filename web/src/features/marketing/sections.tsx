@@ -18,6 +18,7 @@ import {
 import { Wordmark } from "@/components/brand/wordmark";
 import { ButtonLink } from "@/components/ui/button";
 import { cn } from "@/lib/cn";
+import { LEGAL_DOCS } from "@/features/legal/content";
 import { Reveal, RotatingWord, TypingLines } from "./components/motion";
 import { Carousel } from "./components/carousel";
 import { FeedMockup, StoryMockup, ReelsMockup, RightColumnMockup, LeadFormMockup } from "./components/ad-mockups";
@@ -662,7 +663,7 @@ export function FinalCta() {
 export function SiteFooter() {
   return (
     <footer className="relative overflow-hidden bg-ink text-paper">
-      <div className={cn(wrap, "grid gap-12 py-16 md:grid-cols-[1.4fr_1fr_1fr]")}>
+      <div className={cn(wrap, "grid gap-12 py-16 sm:grid-cols-2 lg:grid-cols-[1.4fr_1fr_1fr_1fr]")}>
         <div>
           <Wordmark className="text-[34px] text-chartreuse" />
           <p className="mt-4 max-w-[340px] text-[15px] leading-relaxed text-paper/65">
@@ -673,16 +674,16 @@ export function SiteFooter() {
           <p className="text-[13px] font-extrabold uppercase tracking-wide text-paper/50">Product</p>
           <ul className="mt-4 space-y-2.5 text-[15px]">
             {[
-              ["#how", "How it works"],
-              ["#features", "Features"],
-              ["#placements", "Placements"],
-              ["#plans", "Plans"],
-              ["#faq", "FAQ"],
+              ["/#how", "How it works"],
+              ["/#features", "Features"],
+              ["/#placements", "Placements"],
+              ["/#plans", "Plans"],
+              ["/#faq", "FAQ"],
             ].map(([href, label]) => (
               <li key={href}>
-                <a href={href} className="text-paper/80 hover:text-chartreuse">
+                <Link href={href} className="text-paper/80 hover:text-chartreuse">
                   {label}
-                </a>
+                </Link>
               </li>
             ))}
           </ul>
@@ -700,6 +701,18 @@ export function SiteFooter() {
                 Sign in
               </Link>
             </li>
+          </ul>
+        </nav>
+        <nav aria-label="Legal">
+          <p className="text-[13px] font-extrabold uppercase tracking-wide text-paper/50">Legal</p>
+          <ul className="mt-4 space-y-2.5 text-[15px]">
+            {LEGAL_DOCS.map((d) => (
+              <li key={d.slug}>
+                <Link href={`/${d.slug}`} className="text-paper/80 hover:text-chartreuse">
+                  {d.title}
+                </Link>
+              </li>
+            ))}
           </ul>
         </nav>
       </div>

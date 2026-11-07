@@ -93,6 +93,17 @@ export function SignupForm() {
       <Button type="submit" size="lg" disabled={pending} className="mt-2">
         {pending ? "Creating account…" : "Create account"}
       </Button>
+      <p className="text-[13px] leading-relaxed text-ink-muted">
+        By creating an account you agree to our{" "}
+        <Link href="/terms" className="font-bold text-ink hover:underline">
+          Terms
+        </Link>{" "}
+        and{" "}
+        <Link href="/privacy" className="font-bold text-ink hover:underline">
+          Privacy Policy
+        </Link>
+        .
+      </p>
       <p className="text-sm text-ink-muted">
         Already have an account?{" "}
         <Link href="/login" className="font-bold text-tomato-700 hover:underline">

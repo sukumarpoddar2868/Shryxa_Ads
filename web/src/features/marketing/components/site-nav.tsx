@@ -7,11 +7,11 @@ import { ButtonLink } from "@/components/ui/button";
 import { cn } from "@/lib/cn";
 
 const links = [
-  { href: "#how", label: "How it works" },
-  { href: "#features", label: "Features" },
-  { href: "#placements", label: "Placements" },
-  { href: "#plans", label: "Plans" },
-  { href: "#faq", label: "FAQ" },
+  { href: "/#how", label: "How it works" },
+  { href: "/#features", label: "Features" },
+  { href: "/#placements", label: "Placements" },
+  { href: "/#plans", label: "Plans" },
+  { href: "/#faq", label: "FAQ" },
 ];
 
 /** Transparent over the hero; turns into a frosted bar once you scroll. */

@@ -65,14 +65,14 @@ Run: `cd web && pnpm dev` · check: `pnpm lint && pnpm build`. Env: copy `web/.e
 - Landing: `features/marketing/sections.tsx` (Hero, IndustryMarquee, Contrast, HowItWorks, Features bento, Placements carousel, Facts, Audiences carousel, Plans (limits only — no prices invented), Faq, FinalCta, SiteFooter) + `components/{motion,carousel,site-nav,ad-mockups}.tsx`. Mockups use fictional "Bloom Café"; no fake testimonials/metrics/logos.
 - Routes: `(public)/` → `/`, `/login`, `/signup`; `(app)/` → `/dashboard` (placeholder KPIs). Proxy guards `/dashboard|campaigns|clients|account|admin`.
 
-## Phases
-1. Foundation (project, supabase client, auth, policy pages)
-2. Clients + Meta OAuth
-3. Campaign engine port (schema/builder/adapters, mock first, parity with Python)
-4. Create wizard + preview
-5. Dashboard + Manage
-6. Billing + admin
-7. Parallel run on same DB → cutover
+## Phases (✅ done · 🔨 in progress · ⏳ next)
+1. ✅ **Foundation** — project, supabase client, auth, app shell, landing, Vercel deploy, policy pages `/privacy` `/terms` `/refund` `/service` (Markdown in `features/legal/content.ts`, rendered by `legal-page.tsx`; Legal column in footer; signup links Terms/Privacy).
+2. 🔨 **Clients + Meta OAuth** — Clients page (add/list/remove, enforce `client_limit` per tier; fields: business name, ad account, page, service model, billing arrangement, status). "Connect Meta" → `api/meta/oauth/start` + `api/meta/oauth/callback` route handlers, Fernet-compatible token encryption (`META_TOKEN_ENCRYPTION_KEY`), ad-account picker via `meta_oauth_pending`. User must add Vercel redirect URI in Meta app + `META_*` env vars on Vercel.
+3. ⏳ **Campaign engine port** — `payload_pipeline` (schemas → Zod, builders, mock/validate-only/live adapters), `yaml_render`, `presets`, `meta_utils` (interest IDs), image upload, lead forms. Mock first; prove request parity with Python.
+4. ⏳ **Create wizard + preview** — destination → client → creative upload (Supabase Storage) → AI copy (Groq, `llm_resolver`) → geo targeting (city → radii) → placement previews → launch (PAUSED default).
+5. ⏳ **Dashboard + Manage** — live insights (`live_fetcher`), KPI grid, campaign table with pause/resume/stop, demo mode.
+6. ⏳ **Billing + admin** — Razorpay checkout + webhook route, trial expiry, auto pause/resume (`pause_resume`), admin panel (tiers, manual extension). Needs plan prices from user → also add to landing Plans.
+7. ⏳ **Cutover** — parallel run on same DB, tighten legacy column types, point domain to Next.js, retire Streamlit.
 
 ## Open decisions
 - Benchmark report (external CLI): drop / port / separate service?
@@ -88,4 +88,5 @@ Run: `cd web && pnpm dev` · check: `pnpm lint && pnpm build`. Env: copy `web/.e
   - Note: use `pnpm run <script>` (pnpm 12 rejects `pnpm -s`).
   - 2026-11-08: committed `f0678d4` on main (web/ + CLAUDE.md only; user's Python OAuth edits + .bak files intentionally left uncommitted). Push failed from Claude's shell (no GitHub credentials) → user pushes manually. Deploy: Vercel, Root Directory `web`, env SUPABASE_URL + SUPABASE_SERVICE_ROLE_KEY. If pnpm install fails on Vercel (packageManager pnpm@12), add env ENABLE_EXPERIMENTAL_COREPACK=1.
   - 2026-11-08: deployed on Vercel by user. Landing rebuilt as long page (12 sections, marquees, 2 carousels, bento, patterns, animations); wordmark → `shryxa ads.`; titles "Shryxa Ads". Verified desktop+mobile, no console errors/overflow. Not yet committed.
-  - Phase 1 TODO: port policy pages (privacy/terms/refund/service) + add Legal column to landing footer; then Phase 2 (clients + Meta OAuth).
+  - 2026-11-08: Phase 1 DONE — policy pages ported & updated for new stack (Shryxa Ads name, Vercel, Supabase Mumbai, Groq, Meta OAuth + encrypted tokens, cookie `shryxa_session`), `LAST_UPDATED` = 8 Nov 2026. Legal text facts flagged to user for review. Known price from Terms: Starter ₹999/mo, $21/mo intl (agency prices unknown).
+  - NEXT: Phase 2 (clients + Meta OAuth).
