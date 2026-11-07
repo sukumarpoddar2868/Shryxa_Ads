@@ -60,6 +60,36 @@ export function SignupForm() {
   return (
     <form action={action} className="flex flex-col gap-5" noValidate>
       {state.error && <Callout tone="error">{state.error}</Callout>}
+      <fieldset aria-describedby={fe.accountType ? "accountType-error" : undefined}>
+        <legend className="mb-2 text-[13px] font-bold">How will you use Shryxa Ads?</legend>
+        <div className="grid grid-cols-2 gap-3">
+          {[
+            { value: "business", title: "My own business", body: "Run ads for one business" },
+            { value: "agency", title: "I manage clients", body: "Agency or freelancer" },
+          ].map((o) => (
+            <label
+              key={o.value}
+              className="cursor-pointer rounded-[10px] bg-lavender-soft p-4 ring-2 ring-transparent transition-colors hover:ring-line has-[:checked]:bg-chartreuse has-[:checked]:ring-ink has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-lavender-deep"
+            >
+              <input
+                type="radio"
+                name="accountType"
+                value={o.value}
+                defaultChecked={state.values?.accountType === o.value}
+                required
+                className="sr-only"
+              />
+              <span className="block text-[15px] font-extrabold leading-tight">{o.title}</span>
+              <span className="mt-1 block text-[13px] text-ink-muted">{o.body}</span>
+            </label>
+          ))}
+        </div>
+        {fe.accountType && (
+          <p id="accountType-error" className="mt-1.5 text-[13px] text-tomato-700">
+            {fe.accountType}
+          </p>
+        )}
+      </fieldset>
       <Field id="email" label="Work email" error={fe.email}>
         <Input
           id="email"

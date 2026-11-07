@@ -2,18 +2,24 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutGrid, Megaphone, Users, CreditCard } from "lucide-react";
+import { LayoutGrid, Megaphone, Users, CreditCard, Store } from "lucide-react";
 import { cn } from "@/lib/cn";
 
-const items = [
-  { href: "/dashboard", label: "Dashboard", icon: LayoutGrid },
-  { href: "/campaigns", label: "Campaigns", icon: Megaphone },
-  { href: "/clients", label: "Clients", icon: Users },
-  { href: "/account", label: "Account", icon: CreditCard },
-] as const;
+type AccountType = "business" | "agency";
 
-export function SidebarNav() {
-  const path = usePathname();
+/** Reads the URL to highlight the active item. Must render inside <Suspense>. */
+export function SidebarNav({ accountType = "agency" }: { accountType?: AccountType }) {
+  return <NavLinks accountType={accountType} path={usePathname()} />;
+}
+
+/** Hook-free version, safe as a prerendered Suspense fallback. */
+export function NavLinks({ accountType = "agency", path = "" }: { accountType?: AccountType; path?: string }) {
+  const items = [
+    { href: "/dashboard", label: "Dashboard", icon: LayoutGrid },
+    { href: "/campaigns", label: "Campaigns", icon: Megaphone },
+    { href: "/clients", label: accountType === "business" ? "My business" : "Clients", icon: accountType === "business" ? Store : Users },
+    { href: "/account", label: "Account", icon: CreditCard },
+  ];
   return (
     <nav aria-label="Main" className="flex gap-1 md:flex-col">
       {items.map(({ href, label, icon: Icon }) => {

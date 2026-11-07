@@ -2,7 +2,7 @@ import Link from "next/link";
 import { Suspense } from "react";
 import { LogOut } from "lucide-react";
 import { Wordmark } from "@/components/brand/wordmark";
-import { SidebarNav } from "@/components/shell/sidebar-nav";
+import { NavLinks, SidebarNav } from "@/components/shell/sidebar-nav";
 import { logoutAction } from "@/features/auth/actions";
 import { requireUser } from "@/features/auth/dal";
 
@@ -17,7 +17,9 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         <Link href="/dashboard" className="px-2 md:mb-8" aria-label="Shryxa Ads dashboard">
           <Wordmark className="text-[26px] text-paper" />
         </Link>
-        <SidebarNav />
+        <Suspense fallback={<NavLinks />}>
+          <UserNav />
+        </Suspense>
         <div className="md:mt-auto">
           <Suspense fallback={<div className="h-10" />}>
             <UserBadge />
@@ -39,6 +41,11 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 async function Gate({ children }: { children: React.ReactNode }) {
   await requireUser();
   return children;
+}
+
+async function UserNav() {
+  const user = await requireUser();
+  return <SidebarNav accountType={user.accountType} />;
 }
 
 async function UserBadge() {

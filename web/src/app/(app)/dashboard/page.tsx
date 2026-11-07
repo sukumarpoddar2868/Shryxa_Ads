@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { Card, Chip, Callout } from "@/components/ui/surface";
 import { ButtonLink } from "@/components/ui/button";
 import { requireUser } from "@/features/auth/dal";
@@ -46,7 +47,12 @@ export default async function DashboardPage() {
       </div>
 
       <Callout>
-        <strong>Coming next:</strong> connect a client&apos;s Meta account to see live campaign data here.
+        <strong>Next step:</strong>{" "}
+        {user.accountType === "business" ? "connect your Facebook" : "add a client and connect their Facebook"} to see live
+        campaign data here.{" "}
+        <Link href="/clients" className="font-bold text-tomato-700 hover:underline">
+          {user.accountType === "business" ? "Connect Facebook" : "Go to clients"} →
+        </Link>
       </Callout>
     </div>
   );

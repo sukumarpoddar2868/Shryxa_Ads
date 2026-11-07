@@ -6,6 +6,7 @@ import { env } from "@/lib/env";
 import { hashPassword, verifyPassword } from "./password";
 import { createSession, destroySession } from "./session";
 import { LoginSchema, SignupSchema, type AuthFormState } from "./schemas";
+import { ensureSelfClient } from "@/features/clients/data";
 
 function fieldErrors(issues: { path: PropertyKey[]; message: string }[]) {
   const out: AuthFormState["fieldErrors"] = {};
@@ -41,10 +42,11 @@ export async function signupAction(_prev: AuthFormState, form: FormData): Promis
   const values = {
     email: String(form.get("email") ?? ""),
     currency: String(form.get("currency") ?? "INR"),
+    accountType: String(form.get("accountType") ?? ""),
   };
   if (!parsed.success) return { fieldErrors: fieldErrors(parsed.error.issues), values };
 
-  const { email, password, currency } = parsed.data;
+  const { email, password, currency, accountType } = parsed.data;
   const now = new Date();
   const trialEnds = new Date(now.getTime() + env().TRIAL_DAYS * 86_400_000);
 
@@ -54,6 +56,7 @@ export async function signupAction(_prev: AuthFormState, form: FormData): Promis
       email,
       password_hash: await hashPassword(password),
       currency,
+      account_type: accountType,
       created_at: now.toISOString(),
       trial_ends_at: trialEnds.toISOString(),
     })
@@ -77,8 +80,13 @@ export async function signupAction(_prev: AuthFormState, form: FormData): Promis
     return { error: "Could not create your account. Please try again.", values };
   }
 
+  // Business owners get their single "My business" client up front.
+  if (accountType === "business") {
+    await ensureSelfClient({ id: user.id, clientLimit: 1 }).catch(() => undefined);
+  }
+
   await createSession(user.id);
-  redirect("/dashboard");
+  redirect(accountType === "business" ? "/clients" : "/dashboard");
 }
 
 export async function logoutAction(): Promise<void> {

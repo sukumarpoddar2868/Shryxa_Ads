@@ -14,6 +14,7 @@ export type CurrentUser = {
   teamSeats: number;
   isAdmin: boolean;
   trialEndsAt: string | null;
+  accountType: "business" | "agency";
 };
 
 /** Data Access Layer: the one place that resolves "who is this request?". */
@@ -23,7 +24,7 @@ export const getCurrentUser = cache(async (): Promise<CurrentUser | null> => {
 
   const { data: u } = await db()
     .from("users")
-    .select("id, email, currency, tier, client_limit, team_seats, is_admin, trial_ends_at")
+    .select("id, email, currency, tier, client_limit, team_seats, is_admin, trial_ends_at, account_type")
     .eq("id", userId)
     .maybeSingle();
   if (!u) return null;
@@ -37,6 +38,7 @@ export const getCurrentUser = cache(async (): Promise<CurrentUser | null> => {
     teamSeats: u.team_seats,
     isAdmin: Boolean(u.is_admin),
     trialEndsAt: u.trial_ends_at,
+    accountType: u.account_type,
   };
 });
 
