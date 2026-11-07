@@ -5,11 +5,14 @@ import { MetaApiError } from "@/lib/meta/graph";
 import { discoverAssets, listPixels } from "./discovery";
 import { getConnectionToken, markConnection } from "./store";
 
+// Each field may be absent: browsers don't submit disabled <select>s
+// (e.g. Pixel before an ad account is saved).
 const optionalId = z
   .string()
   .trim()
   .max(64)
   .regex(/^(act_)?\d*$/, "Invalid id")
+  .optional()
   .transform((v) => v || null);
 
 export const AssetFormSchema = z.object({
@@ -30,6 +33,7 @@ export async function applyAssetSelection(userId: number, clientId: number, conn
   const parsed = AssetFormSchema.safeParse(Object.fromEntries(form));
   if (!parsed.success) return { error: "Something in the selection looks wrong. Please pick again." };
   const pick = parsed.data;
+  if (!pick.adAccountId || !pick.pageId) return { error: "Choose both an ad account and a Facebook Page." };
 
   const token = await getConnectionToken(userId, connectionId);
   if (!token) return { error: "This Facebook connection has expired. Please reconnect." };
