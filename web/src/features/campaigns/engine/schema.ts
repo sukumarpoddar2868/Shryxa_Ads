@@ -111,6 +111,9 @@ export const TargetingInput = z
     // Phone OS targeting, e.g. ["iOS"] / ["Android"]. Meta only allows it with
     // manual placements; device_platforms is then ["mobile"].
     user_os: z.array(z.string()).nullish(),
+    // Custom / lookalike audiences to include or exclude (by Meta audience id).
+    custom_audiences: z.array(z.object({ id: z.string() })).nullish(),
+    excluded_custom_audiences: z.array(z.object({ id: z.string() })).nullish(),
     device_platforms: z.array(z.enum(["mobile", "desktop"])).nullish(),
     targeting_automation: TargetingAutomation.default(() => ({ advantage_audience: 0 })),
   })

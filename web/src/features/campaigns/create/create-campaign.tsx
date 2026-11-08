@@ -21,6 +21,7 @@ export type ClientOption = {
   instagramUsername: string | null;
   /** Connected Pixel (needed for Sales / website leads). */
   hasPixel: boolean;
+  pixelId: string | null;
   pixelName: string | null;
   hasInstagram: boolean;
 };

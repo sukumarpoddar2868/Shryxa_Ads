@@ -90,11 +90,14 @@ export function leadFormReady(d: Draft): boolean {
   return isHttpsUrl(f.privacyUrl) && f.fields.length > 0 && f.questions.every((q) => q.trim().length > 0 && q.length <= 80);
 }
 
+/** Website goals that count conversions with the Pixel (Sales, website leads). */
+export const websiteConversions = (d: Draft) => d.ad.destination === "website" && (d.objective === "OUTCOME_SALES" || d.objective === "OUTCOME_LEADS");
+
 /** Destination-specific details are filled in. */
 export function destinationReady(d: Draft): boolean {
   switch (d.ad.destination) {
     case "website":
-      return isHttpsUrl(d.ad.url);
+      return isHttpsUrl(d.ad.url) && (!websiteConversions(d) || Boolean(d.ad.pixel));
     case "call":
       return isPhone(d.ad.phone);
     case "whatsapp": {
@@ -106,6 +109,17 @@ export function destinationReady(d: Draft): boolean {
     default:
       return true;
   }
+}
+
+export type AudienceType = "core" | "custom" | "lookalike";
+export type SelectedAudience = { id: string; name: string; kind: string };
+
+/** Custom/lookalike need at least one matching audience picked. */
+export function audienceReady(d: Draft): boolean {
+  const a = d.audience;
+  if (a.type === "custom") return a.include.some((x) => x.kind !== "lookalike");
+  if (a.type === "lookalike") return a.include.some((x) => x.kind === "lookalike");
+  return true;
 }
 
 export type DeviceOs = "all" | "android" | "ios";
@@ -121,7 +135,7 @@ type ClientCaps = { hasPixel?: boolean; hasInstagram?: boolean } | undefined;
 
 /** Destinations per objective, with availability for this client. */
 export function destinationOptions(objective: ObjectiveId, client: ClientCaps): DestinationOption[] {
-  const pixel = client?.hasPixel ? {} : { available: false, note: "Needs Pixel" };
+  const pixel = client?.hasPixel ? {} : { note: "Pixel setup included" };
   const ig = client?.hasInstagram ? {} : { available: false, note: "Needs Instagram" };
   const opt = (id: Destination, label: string, blurb: string, extra: Partial<DestinationOption> = {}): DestinationOption => ({ id, label, blurb, available: true, ...extra });
   switch (objective) {
@@ -209,6 +223,11 @@ export type Draft = {
     device: DeviceOs;
     /** AI's one-line reason for the age/gender/phone choice. */
     why: string;
+    /** Core = location/age/gender/interests (default). Custom / lookalike add Meta audiences on top. */
+    type: AudienceType;
+    include: SelectedAudience[];
+    /** Excluded audiences (e.g. existing customers) — any type. */
+    exclude: SelectedAudience[];
   };
   placements: {
     mode: "advantage" | "manual";
@@ -225,6 +244,8 @@ export type Draft = {
     /** Website conversions (Sales / website leads): Pixel event to optimise for. */
     conversionEvent: ConversionEvent;
     whatsapp: DraftWhatsApp;
+    /** Meta Pixel used for website goals (saved on the client too). */
+    pixel: { id: string; name: string } | null;
     primaryText: string;
     headline: string;
     description: string;
@@ -238,16 +259,16 @@ export type Draft = {
   };
 };
 
-export const initialDraft = (client: { id: number; name: string } | null): Draft => ({
+export const initialDraft = (client: { id: number; name: string; pixelId?: string | null; pixelName?: string | null } | null): Draft => ({
   objective: null,
   clientId: client?.id ?? null,
   setup: { businessName: client?.name ?? "", website: "", about: "", offer: "", cities: [], scope: "hyper-local" },
   generated: false,
   launched: null,
   campaign: { name: "", budgetType: "daily", amount: String(CURRENCY.INR.defaultDailyBudget), currency: "INR", startDate: "", endDate: "", frequencyCap: 2 },
-  audience: { locations: [], ageMin: 18, ageMax: 65, gender: "any", language: "English", interests: [], mode: "strict", device: "all", why: "" },
+  audience: { locations: [], ageMin: 18, ageMax: 65, gender: "any", language: "English", interests: [], mode: "strict", device: "all", why: "", type: "core", include: [], exclude: [] },
   placements: { mode: "advantage", facebook: true, instagram: true },
-  ad: { destination: "lead_form", url: "", phone: "", whatsappNumber: "", conversionEvent: "LEAD", whatsapp: { greeting: "", style: "prefill", prefill: "", questions: [], perItem: false }, primaryText: "", headline: "", description: "", cta: "GET_QUOTE", format: "single", media: {}, leadForm: { name: "", privacyUrl: "", fields: ["FULL_NAME", "PHONE_NUMBER", "EMAIL"], questions: [], thankYou: "Thanks! We'll call you back shortly." }, cardIdeas: [], carousel: { cards: [], optimizeOrder: true, endCard: false } },
+  ad: { destination: "lead_form", url: "", phone: "", whatsappNumber: "", conversionEvent: "LEAD", whatsapp: { greeting: "", style: "prefill", prefill: "", questions: [], perItem: false }, pixel: client?.pixelId ? { id: client.pixelId, name: client.pixelName ?? `Pixel ${client.pixelId}` } : null, primaryText: "", headline: "", description: "", cta: "GET_QUOTE", format: "single", media: {}, leadForm: { name: "", privacyUrl: "", fields: ["FULL_NAME", "PHONE_NUMBER", "EMAIL"], questions: [], thankYou: "Thanks! We'll call you back shortly." }, cardIdeas: [], carousel: { cards: [], optimizeOrder: true, endCard: false } },
 });
 
 /** Section is "done" enough to show a tick in the rail. */
@@ -258,7 +279,7 @@ export function sectionComplete(id: SectionId, d: Draft): boolean {
     case "name-budget":
       return d.campaign.name.trim() !== "" && Number(d.campaign.amount) > 0;
     case "audience":
-      return d.audience.locations.length > 0;
+      return d.audience.locations.length > 0 && audienceReady(d);
     case "placements":
       return d.placements.mode === "advantage" || d.placements.facebook || d.placements.instagram;
     case "creative":
@@ -294,8 +315,7 @@ export const PLANNED: Partial<Record<SectionId, string[]>> = {
     "Map with the pins and circles; drag to adjust",
     "Estimated audience size with a too-narrow warning",
     "Match AI interests to real Meta interests (country-aware)",
-    "Retargeting: website visitors, Page/Instagram engagers, lead-form openers",
-    "Customer list upload, lookalikes, and excluding existing customers",
+    "More custom audiences: lead-form openers, video viewers, WhatsApp chatters",
   ],
   placements: ["Per-position control (Feed, Stories, Reels, right column)", "Placement preview per position"],
   creative: [

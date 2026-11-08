@@ -224,6 +224,19 @@ test("WhatsApp greeting: pre-filled message or quick questions", () => {
   assert.equal(ld({}).page_welcome_message, undefined);
 });
 
+test("custom and lookalike audiences reach ad set targeting", () => {
+  const c = fixtures.valid.find((x) => x.name === "render_website_inr_epicenters")!;
+  const t = (extra: Partial<RenderInput>) =>
+    buildAll(validateSpec(renderSpec({ ...toRenderInput(c.render_kwargs!), ...extra })))[1].payload.targeting as Record<string, unknown>;
+  const with_ = t({ audiences: { include: ["111", "222"], exclude: ["333"] } });
+  assert.deepEqual(with_.custom_audiences, [{ id: "111" }, { id: "222" }]);
+  assert.deepEqual(with_.excluded_custom_audiences, [{ id: "333" }]);
+  assert.ok(with_.geo_locations, "location still applies");
+  const core = t({});
+  assert.equal("custom_audiences" in core, false);
+  assert.equal("excluded_custom_audiences" in core, false);
+});
+
 test("pilot guard: blocks website leads, allows instant form", () => {
   const leadCase = fixtures.valid.find((c) => c.name === "render_leadform_inr_variants")!;
   const ops = buildAll(validateSpec(leadCase.input));

@@ -23,6 +23,12 @@ export function Summary({ draft: d, clients }: { draft: Draft; clients: ClientOp
     {
       level: "Ad set",
       items: [
+        [
+          "Audience",
+          d.audience.type === "core"
+            ? `Core${d.audience.exclude.length ? ` · ${d.audience.exclude.length} excluded` : ""}`
+            : `${d.audience.type === "custom" ? "Custom" : "Lookalike"} · ${d.audience.include.length} picked`,
+        ],
         ["Areas", d.audience.locations.length ? `${d.audience.locations.length} area${d.audience.locations.length === 1 ? "" : "s"}` : undefined],
         ["People", `${d.audience.ageMin}–${d.audience.ageMax} · ${gender}${d.audience.device === "all" ? "" : ` · ${DEVICE_LABELS[d.audience.device]}`}`],
         ["Placements", d.placements.mode === "advantage" ? "Advantage+ (automatic)" : [d.placements.facebook && "Facebook", d.placements.instagram && "Instagram"].filter(Boolean).join(" + ") || undefined],

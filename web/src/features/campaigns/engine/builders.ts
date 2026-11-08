@@ -153,6 +153,8 @@ export function buildAdSet(spec: CampaignSpec): Operation {
     facebook_positions: t.facebook_positions,
     instagram_positions: t.instagram_positions,
     user_os: t.user_os,
+    custom_audiences: orNull(t.custom_audiences),
+    excluded_custom_audiences: orNull(t.excluded_custom_audiences),
     device_platforms: t.device_platforms,
     targeting_automation: t.targeting_automation,
   });

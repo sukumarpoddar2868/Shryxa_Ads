@@ -16,7 +16,7 @@ import { DestinationDetails } from "./destination-details";
 import { MediaSlot } from "../media/media-slot";
 import { ctaLabel } from "./ad-preview";
 import { MEDIA_RULES } from "../media/rules";
-import { CAROUSEL_MIN, DESTINATION_LABELS, PLANNED, cardReady, destinationReady, leadFormReady, mediaReady, type AdFormat, type Draft, type SectionId } from "./blueprint";
+import { CAROUSEL_MIN, DESTINATION_LABELS, audienceReady, PLANNED, cardReady, destinationReady, leadFormReady, mediaReady, type AdFormat, type Draft, type SectionId } from "./blueprint";
 import type { SectionProps } from "./create-campaign";
 
 /* ------------------------------------------------------------------ shared */
@@ -561,6 +561,7 @@ export function ReviewSection({ draft, update, clients, goTo }: SectionProps) {
     { id: "start", label: "Goal chosen and campaign drafted with AI", ok: draft.objective !== null && draft.generated },
     { id: "name-budget", label: "Name and budget set", ok: draft.campaign.name.trim() !== "" && Number(draft.campaign.amount) > 0 },
     { id: "audience", label: "At least one location", ok: draft.audience.locations.length > 0 },
+    ...(draft.audience.type === "core" ? [] : [{ id: "audience" as const, label: draft.audience.type === "custom" ? "Custom audience picked" : "Lookalike audience picked", ok: audienceReady(draft) }]),
     {
       id: "creative" as const,
       label: draft.ad.format === "video" ? "Video uploaded" : draft.ad.format === "carousel" ? "An image on every carousel card" : "Square feed image uploaded",

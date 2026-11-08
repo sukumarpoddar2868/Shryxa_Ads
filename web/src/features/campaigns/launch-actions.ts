@@ -39,6 +39,8 @@ const LaunchPayload = z.object({
     language: z.string().max(40),
     advantage: z.boolean(),
     device: z.enum(["all", "android", "ios"]),
+    include: z.array(z.string().regex(/^\d+$/)).max(20),
+    exclude: z.array(z.string().regex(/^\d+$/)).max(20),
   }),
   placements: z.object({ manual: z.boolean(), facebook: z.boolean(), instagram: z.boolean() }),
   ad: z.object({
@@ -259,6 +261,7 @@ export async function launchDraftAction(raw: LaunchPayload, mode: "validate" | "
     launchStatus: "PAUSED",
     advantageAudience: p.audience.advantage,
     deviceOs: p.audience.device,
+    audiences: p.audience.include.length || p.audience.exclude.length ? { include: p.audience.include, exclude: p.audience.exclude } : null,
     phoneNumber: p.ad.destination === "call" ? p.ad.phone.replace(/[^\d+]/g, "") : null,
     whatsappNumber: p.ad.destination === "whatsapp" && p.ad.whatsappNumber.trim() ? p.ad.whatsappNumber.replace(/[^\d+]/g, "") : null,
     pixel: websiteConversions ? { pixelId: client.pixel_id!, event: p.ad.conversionEvent } : null,

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, type ReactNode } from "react";
-import { ChevronUp, Heart, Image as ImageIcon, MessageCircle, MoreHorizontal, Send, ThumbsUp } from "lucide-react";
+import { ChevronUp, Heart, Phone, Image as ImageIcon, MessageCircle, MoreHorizontal, Send, ThumbsUp } from "lucide-react";
 import { cn } from "@/lib/cn";
 import type { MediaRef } from "../media/rules";
 import { itemMessage } from "../whatsapp/links";
@@ -14,7 +14,7 @@ import type { ClientOption } from "./create-campaign";
  * Neutral styling — no platform logos.
  */
 
-type Placement = "fb" | "ig" | "story" | "form" | "whatsapp";
+type Placement = "fb" | "ig" | "story" | "form" | "whatsapp" | "call";
 const TABS: { id: Placement; label: string }[] = [
   { id: "fb", label: "Facebook" },
   { id: "ig", label: "Instagram" },
@@ -150,7 +150,9 @@ export function AdPreview({ draft, client }: { draft: Draft; client?: ClientOpti
       ? [...TABS, { id: "form" as const, label: "Form" }]
       : ad.destination === "whatsapp"
         ? [...TABS, { id: "whatsapp" as const, label: "WhatsApp" }]
-        : TABS;
+        : ad.destination === "call"
+          ? [...TABS, { id: "call" as const, label: "Call" }]
+          : TABS;
   const tab = tabs.some((t) => t.id === picked) ? picked : "fb";
   const page = client?.pageName || draft.setup.businessName || "Your Page";
   const igName = client?.instagramUsername || page.toLowerCase().replace(/[^a-z0-9]+/g, "");
@@ -280,6 +282,7 @@ export function AdPreview({ draft, client }: { draft: Draft; client?: ClientOpti
 
       {tab === "form" && <FormMock draft={draft} page={page} />}
       {tab === "whatsapp" && <WhatsAppMock draft={draft} page={page} />}
+      {tab === "call" && <CallMock phone={ad.phone} page={page} />}
 
       <p className="text-center text-[12px] text-ink-muted">
         Approximate preview. Meta may crop or rearrange slightly per device.
@@ -416,6 +419,26 @@ function WhatsAppMock({ draft, page }: { draft: Draft; page: string }) {
       <p className="text-center text-[12px] text-ink-muted">
         {perItem ? "Each item opens WhatsApp with its own message and picture link." : "Meta shows which ad the chat came from in your WhatsApp Business inbox."}
       </p>
+    </div>
+  );
+}
+
+/** What happens after "Call now": the phone's dialer opens with the number. */
+function CallMock({ phone, page }: { phone: string; page: string }) {
+  return (
+    <div className="flex flex-col gap-3">
+      <div className="mx-auto flex aspect-[9/16] w-full max-w-[240px] flex-col items-center justify-between rounded-[22px] bg-ink px-5 py-8 text-paper shadow-[0_18px_44px_-20px_rgb(42_39_51/0.5)]">
+        <div className="flex flex-col items-center gap-2 text-center">
+          <span className="grid size-16 place-items-center rounded-full bg-chartreuse text-[18px] font-extrabold text-ink">{initials(page)}</span>
+          <p className="text-[15px] font-bold">{page}</p>
+          <p className="text-[18px] tabular-nums tracking-wide">{phone.trim() || "+91 ••••• •••••"}</p>
+          <p className="text-[11px] text-paper/60">Dialer opens — the customer taps to call</p>
+        </div>
+        <span className="grid size-14 place-items-center rounded-full bg-chartreuse text-ink" aria-hidden>
+          <Phone className="size-6" />
+        </span>
+      </div>
+      <p className="text-center text-[12px] text-ink-muted">Call ads show on phones only. Meta optimises for calls that last long enough to be real enquiries.</p>
     </div>
   );
 }

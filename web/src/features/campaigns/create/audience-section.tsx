@@ -10,11 +10,12 @@ import { resolveAreaAction } from "../ai/actions";
 import { SCOPE_INFO } from "../ai/prompts.ts";
 import { DEVICE_LABELS, type DeviceOs, type DraftPin } from "./blueprint";
 import type { SectionProps } from "./create-campaign";
+import { AudienceTargeting } from "./audience-targeting";
 import { ChipInput, ChoiceCard, Group, Header, Planned, Segmented, set } from "./sections";
 
 const RADII = [1, 1.5, 2, 3, 5, 8, 10, 15, 20, 25, 40, 60, 80];
 
-export function AudienceSection({ draft, update, goTo }: SectionProps) {
+export function AudienceSection({ draft, update, goTo, clients }: SectionProps) {
   const a = draft.audience;
   const ageId = useId();
   const ages = Array.from({ length: 65 - 18 + 1 }, (_, i) => 18 + i);
@@ -47,6 +48,10 @@ export function AudienceSection({ draft, update, goTo }: SectionProps) {
     <>
       <Header level="Ad set" title="Audience" blurb="Who should see the ad. For local businesses, a tight area matters more than anything else." />
       <div className="flex flex-col gap-6">
+        <Group title="Who to target" hint="Core audience works for most local businesses. Add custom or lookalike audiences when you have customers or engagers.">
+          <AudienceTargeting draft={draft} update={update} client={clients.find((c) => c.id === draft.clientId)} />
+        </Group>
+
         <Group title="Locations" hint={`Each area is a circle around a pin. Scope: ${SCOPE_INFO[draft.setup.scope].label}.`}>
           {!draft.generated && a.locations.length === 0 && (
             <Callout>

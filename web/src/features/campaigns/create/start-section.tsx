@@ -184,7 +184,12 @@ export function StartSection({ draft, update, clients, isAgency, goTo }: Section
                   value={draft.clientId ?? ""}
                   onChange={(e) => {
                     const next = clients.find((c) => c.id === Number(e.target.value));
-                    update((d) => ({ ...d, clientId: next?.id ?? null, setup: { ...d.setup, businessName: next?.name ?? d.setup.businessName } }));
+                    update((d) => ({
+                      ...d,
+                      clientId: next?.id ?? null,
+                      setup: { ...d.setup, businessName: next?.name ?? d.setup.businessName },
+                      ad: { ...d.ad, pixel: next?.pixelId ? { id: next.pixelId, name: next.pixelName ?? `Pixel ${next.pixelId}` } : null },
+                    }));
                   }}
                 >
                   <option value="">Choose a client…</option>

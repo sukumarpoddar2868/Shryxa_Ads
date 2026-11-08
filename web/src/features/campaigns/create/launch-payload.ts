@@ -25,6 +25,8 @@ export function toLaunchPayload(d: Draft): LaunchPayload | null {
       language: d.audience.language,
       advantage: d.audience.mode === "advantage",
       device: d.audience.device,
+      include: d.audience.type === "core" ? [] : d.audience.include.filter((x) => (d.audience.type === "lookalike" ? x.kind === "lookalike" : x.kind !== "lookalike")).map((x) => x.id),
+      exclude: d.audience.exclude.map((x) => x.id),
     },
     placements: { manual: d.placements.mode === "manual", facebook: d.placements.facebook, instagram: d.placements.instagram },
     ad: {

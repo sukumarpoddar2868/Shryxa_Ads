@@ -85,6 +85,8 @@ export type RenderInput = {
   pixel?: { pixelId: string; event: string } | null;
   /** Awareness: max impressions per person per 7 days. */
   frequencyCap?: number | null;
+  /** Custom / lookalike audiences (Meta ids). Location, age and gender still apply on top. */
+  audiences?: { include: string[]; exclude: string[] } | null;
   /** Manual placements; omitted = Advantage+ (all platforms). */
   publisherPlatforms?: ("facebook" | "instagram")[];
   /** Name suffix (YYMMDD-HHMMSS) so retries don't collide in Ads Manager. */
@@ -230,6 +232,8 @@ export function renderSpec(input: RenderInput): CampaignSpecInput {
           ? { device_platforms: ["mobile"] } // people must be able to tap-to-call
           : {}),
       // Advantage Audience off: delivery stays strict to the geo we set.
+      ...(input.audiences?.include.length ? { custom_audiences: input.audiences.include.map((id) => ({ id })) } : {}),
+      ...(input.audiences?.exclude.length ? { excluded_custom_audiences: input.audiences.exclude.map((id) => ({ id })) } : {}),
       targeting_automation: { advantage_audience: input.advantageAudience ? 1 : 0 },
     },
   };
