@@ -33,6 +33,12 @@ const MetaEnvSchema = z.object({
     .transform((v) => v?.trim() || undefined),
   META_API_VERSION: z.string().regex(/^v\d+\.\d+$/).default("v23.0"),
   META_TOKEN_ENCRYPTION_KEY: z.string().length(44),
+  // "true" only once Pixel + CAPI are verified: unlocks conversion objectives
+  // (Sales, Website leads). Instant Form leads never need it.
+  CONVERSION_TRACKING_VERIFIED: z
+    .string()
+    .optional()
+    .transform((v) => v?.trim().toLowerCase() === "true"),
 });
 export type MetaEnv = z.infer<typeof MetaEnvSchema>;
 
@@ -50,6 +56,29 @@ export function metaEnv(): MetaEnv {
 
 export function metaConfigured(): boolean {
   return MetaEnvSchema.safeParse(process.env).success;
+}
+
+/** Groq (AI copy + locations). Optional so the app runs without it. */
+const AiEnvSchema = z.object({
+  GROQ_API_KEY: z.string().min(10),
+  GROQ_MODEL: z
+    .string()
+    .optional()
+    .transform((v) => v?.trim() || "openai/gpt-oss-120b"),
+});
+export type AiEnv = z.infer<typeof AiEnvSchema>;
+
+let aiCached: AiEnv | null = null;
+export function aiEnv(): AiEnv {
+  if (aiCached) return aiCached;
+  const parsed = AiEnvSchema.safeParse(process.env);
+  if (!parsed.success) throw new Error("AI is not configured: set GROQ_API_KEY. See web/.env.example.");
+  aiCached = parsed.data;
+  return aiCached;
+}
+
+export function aiConfigured(): boolean {
+  return AiEnvSchema.safeParse(process.env).success;
 }
 
 export function env(): Env {
