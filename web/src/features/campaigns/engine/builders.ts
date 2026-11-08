@@ -35,7 +35,7 @@ function strip(o: Record<string, unknown>): JsonObject {
 }
 const orNull = <T>(a: T[] | null | undefined): T[] | null => (a && a.length ? a : null);
 
-type LinkData = CampaignSpec["ad"]["creative"]["object_story_spec"]["link_data"];
+type LinkData = NonNullable<CampaignSpec["ad"]["creative"]["object_story_spec"]["link_data"]>;
 
 /**
  * asset_feed_spec with per-placement image rules. Images are referenced by
@@ -43,7 +43,8 @@ type LinkData = CampaignSpec["ad"]["creative"]["object_story_spec"]["link_data"]
  * in order, first match wins → IG portrait before the generic feed rule.
  */
 function buildAssetFeedSpec(ld: LinkData, ctaValue: Record<string, string>): JsonObject {
-  const images: JsonObject[] = [{ hash: ld.image_hash, name: "feed" }];
+  // Single-image ads always have image_hash (schema-enforced).
+  const images: JsonObject[] = [{ hash: ld.image_hash ?? null, name: "feed" }];
   const rules: JsonObject[] = [];
 
   if (ld.image_hash_story) {
@@ -168,14 +169,49 @@ export function buildAdSet(spec: CampaignSpec): Operation {
 export function buildAd(spec: CampaignSpec): Operation {
   const a = spec.ad;
   const oss = a.creative.object_story_spec;
-  const ld = oss.link_data;
+
+  if (oss.video_data) {
+    const v = oss.video_data;
+    const value: Record<string, string> = v.call_to_action.value_lead_gen_form_id
+      ? { lead_gen_form_id: v.call_to_action.value_lead_gen_form_id }
+      : { link: v.call_to_action.value_link || v.link };
+    const objectStorySpec = strip({
+      page_id: oss.page_id,
+      instagram_actor_id: oss.instagram_actor_id,
+      video_data: strip({
+        video_id: v.video_id,
+        image_hash: v.image_hash,
+        image_url: v.image_url,
+        message: v.message,
+        title: v.title,
+        link_description: v.link_description,
+        call_to_action: { type: v.call_to_action.type, value },
+      }),
+    });
+    return {
+      resourceType: "ad",
+      refKey: "ad",
+      endpoint: `act_${spec.ad_account_id}/ads`,
+      payload: {
+        name: a.name,
+        adset_id: AD_SET_REF,
+        status: spec.campaign.status,
+        creative: strip({ name: a.creative.name, object_story_spec: objectStorySpec, url_tags: a.creative.url_tags }),
+      },
+    };
+  }
+
+  const ld = oss.link_data!;
 
   // CTA value: website → {link}, lead form → {lead_gen_form_id}.
   const ctaValue: Record<string, string> = ld.call_to_action.value_lead_gen_form_id
     ? { lead_gen_form_id: ld.call_to_action.value_lead_gen_form_id }
     : { link: ld.call_to_action.value_link || ld.link };
 
-  const hasExtras = Boolean(ld.image_hash_story || ld.image_hash_portrait);
+  const cta = { type: ld.call_to_action.type, value: ctaValue };
+  const cards = ld.child_attachments?.length ? ld.child_attachments : null;
+  // Placement image variants only apply to single-image ads.
+  const hasExtras = !cards && Boolean(ld.image_hash_story || ld.image_hash_portrait);
 
   const objectStorySpec = strip({
     page_id: oss.page_id,
@@ -184,12 +220,19 @@ export function buildAd(spec: CampaignSpec): Operation {
     link_data: hasExtras
       ? null
       : strip({
-          image_hash: ld.image_hash,
+          image_hash: cards ? null : ld.image_hash,
           message: ld.message,
           name: ld.name,
           description: ld.description,
           link: ld.link,
-          call_to_action: { type: ld.call_to_action.type, value: ctaValue },
+          call_to_action: cta,
+          child_attachments: cards
+            ? cards.map((c) =>
+                strip({ image_hash: c.image_hash, name: c.name, description: c.description, link: c.link || ld.link, call_to_action: cta }),
+              )
+            : null,
+          multi_share_optimized: cards ? (ld.multi_share_optimized ?? true) : null,
+          multi_share_end_card: cards ? (ld.multi_share_end_card ?? false) : null,
         }),
   });
 

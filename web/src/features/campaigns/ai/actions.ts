@@ -5,8 +5,8 @@ import { requireUser } from "@/features/auth/dal";
 import { getClient } from "@/features/clients/data";
 import { aiConfigured } from "@/lib/env";
 import { CTA_FOR_LEAD_FORM, CTA_FOR_WEBSITE, CURRENCIES, CURRENCY_TO_COUNTRY } from "../engine/presets.ts";
-import { REACH_SCOPES, expectedPins, type CopySuggestion, type Pin } from "./prompts.ts";
-import { generateCopy, resolveLocations } from "./resolver.ts";
+import { REACH_SCOPES, expectedPins, type CardIdea, type CopySuggestion, type Pin } from "./prompts.ts";
+import { generateCards, generateCopy, resolveLocations } from "./resolver.ts";
 
 const text = (max: number) => z.string().trim().max(max);
 
@@ -20,7 +20,6 @@ const SetupInput = z.object({
   cities: z.array(text(80).min(1)).min(1, "Add at least one city.").max(10),
   scope: z.enum(REACH_SCOPES),
   currency: z.enum(CURRENCIES),
-  idealCustomer: text(1000).optional(),
 });
 export type SetupInput = z.input<typeof SetupInput>;
 
@@ -62,7 +61,6 @@ export async function generateSetupAction(input: SetupInput): Promise<SetupResul
         destination,
         ctas: destination === "website" ? CTA_FOR_WEBSITE : CTA_FOR_LEAD_FORM,
         locationCount: expectedPins(d.cities.length, d.scope),
-        idealCustomer: d.idealCustomer,
         fallbackName: `${d.businessName} — ${destination === "website" ? "Traffic" : "Leads"}`.slice(0, 40),
       }),
     ]);
@@ -100,5 +98,30 @@ export async function resolveAreaAction(input: z.input<typeof AreaInput>): Promi
     return { ok: true, pins };
   } catch (e) {
     return { ok: false, error: e instanceof Error ? e.message : "Couldn't find that area." };
+  }
+}
+
+const CardsInput = z.object({
+  clientId: z.number().int().positive(),
+  businessName: text(120),
+  about: text(2000),
+  offer: text(2000),
+  destination: z.enum(["website", "lead_form"]),
+  count: z.number().int().min(2).max(10),
+});
+
+/** Creative step: AI writes a headline + description for each carousel card. */
+export async function generateCardsAction(input: z.input<typeof CardsInput>): Promise<{ ok: true; cards: CardIdea[] } | { ok: false; error: string }> {
+  const user = await requireUser();
+  const parsed = CardsInput.safeParse(input);
+  if (!parsed.success) return { ok: false, error: "Fill in the business details in Start first." };
+  const d = parsed.data;
+  if (!d.about && !d.offer) return { ok: false, error: "Describe the business and offer in Start first." };
+  if (!(await getClient(user.id, d.clientId))) return { ok: false, error: "Client not found." };
+  if (!aiConfigured()) return { ok: false, error: "AI isn't configured on this server yet." };
+  try {
+    return { ok: true, cards: await generateCards(d) };
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : "AI failed. Please try again." };
   }
 }

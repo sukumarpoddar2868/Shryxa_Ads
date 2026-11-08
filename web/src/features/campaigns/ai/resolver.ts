@@ -3,6 +3,9 @@ import { groqJson } from "@/lib/ai/groq";
 import type { Currency, Destination } from "../engine/presets.ts";
 import type { CtaType } from "../engine/schema.ts";
 import {
+  cardsPrompt,
+  sanitizeCards,
+  type CardIdea,
   LocationGuess,
   copyPrompt,
   fallbackCopy,
@@ -48,7 +51,6 @@ export async function generateCopy(p: {
   destination: Destination;
   ctas: readonly CtaType[];
   locationCount: number;
-  idealCustomer?: string;
   fallbackName: string;
 }): Promise<{ copy: CopySuggestion; fallback: boolean }> {
   const prompt = copyPrompt(p);
@@ -62,4 +64,19 @@ export async function generateCopy(p: {
     }
   }
   return { copy: fallbackCopy(p), fallback: true };
+}
+
+/** Carousel card headlines/descriptions. Retries once; throws if nothing usable. */
+export async function generateCards(p: { businessName: string; about: string; offer: string; destination: Destination; count: number }): Promise<CardIdea[]> {
+  const prompt = cardsPrompt(p);
+  for (let attempt = 0; attempt < 2; attempt++) {
+    try {
+      const raw = JSON.parse(await groqJson(prompt, { maxTokens: 1500, temperature: 0.7 })) as { cards?: unknown };
+      const cards = sanitizeCards(raw.cards, p.count);
+      if (cards.length >= Math.min(2, p.count)) return cards;
+    } catch {
+      // retry
+    }
+  }
+  throw new Error("The AI couldn't write the cards right now. Please try again.");
 }

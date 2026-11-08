@@ -6,6 +6,7 @@
 import { CURRENCY, type Currency, type Destination } from "../engine/presets.ts";
 import type { CtaType } from "../engine/schema.ts";
 import type { ReachScope } from "../ai/prompts.ts";
+import type { MediaRef } from "../media/rules";
 
 export type SectionId = "start" | "name-budget" | "audience" | "placements" | "creative" | "review";
 
@@ -37,6 +38,25 @@ export const OBJECTIVE_OPTIONS: {
   { id: "OUTCOME_ENGAGEMENT", label: "Engagement", blurb: "Get messages, video views or Page likes.", available: false, note: "Later" },
   { id: "OUTCOME_SALES", label: "Sales", blurb: "Find people likely to buy online.", available: false, note: "Needs Pixel" },
 ];
+
+export type AdFormat = "single" | "carousel" | "video";
+/** One carousel card (1:1 image). */
+export type DraftCard = { id: string; headline: string; description: string; link: string; image?: MediaRef };
+
+/** Uploaded media for single-image (feed/portrait/story) and video ads. */
+export type DraftMedia = { feed?: MediaRef; portrait?: MediaRef; story?: MediaRef; video?: MediaRef };
+export const CAROUSEL_MIN = 2;
+export const CAROUSEL_MAX = 10;
+
+/** Headline is valid when present and within Meta's 40 characters. */
+export const cardReady = (c: DraftCard) => c.headline.trim() !== "" && c.headline.length <= 40;
+
+/** Required media per format: feed image · every card image · the video. */
+export function mediaReady(d: Draft): boolean {
+  if (d.ad.format === "video") return Boolean(d.ad.media.video);
+  if (d.ad.format === "carousel") return d.ad.carousel.cards.length > 0 && d.ad.carousel.cards.every((c) => c.image);
+  return Boolean(d.ad.media.feed);
+}
 
 export type DeviceOs = "all" | "android" | "ios";
 export const DEVICE_LABELS: Record<DeviceOs, string> = { all: "All phones", android: "Android", ios: "iPhone" };
@@ -70,8 +90,6 @@ export type Draft = {
     offer: string;
     cities: string[];
     scope: ReachScope;
-    /** Optional: who the ideal customer is — AI maps it to age, gender, phone type, interests. */
-    idealCustomer: string;
   };
   /** True once the AI has filled the campaign; every field stays editable. */
   generated: boolean;
@@ -108,18 +126,23 @@ export type Draft = {
     headline: string;
     description: string;
     cta: CtaType;
+    format: AdFormat;
+    media: DraftMedia;
+    /** AI card ideas from Start, used when switching to carousel. */
+    cardIdeas: { headline: string; description: string }[];
+    carousel: { cards: DraftCard[]; optimizeOrder: boolean; endCard: boolean };
   };
 };
 
 export const initialDraft = (client: { id: number; name: string } | null): Draft => ({
   objective: null,
   clientId: client?.id ?? null,
-  setup: { businessName: client?.name ?? "", website: "", about: "", offer: "", cities: [], scope: "hyper-local", idealCustomer: "" },
+  setup: { businessName: client?.name ?? "", website: "", about: "", offer: "", cities: [], scope: "hyper-local" },
   generated: false,
   campaign: { name: "", budgetType: "daily", amount: String(CURRENCY.INR.defaultDailyBudget), currency: "INR", startDate: "", endDate: "" },
   audience: { locations: [], ageMin: 18, ageMax: 65, gender: "any", language: "English", interests: [], mode: "strict", device: "all", why: "" },
   placements: { mode: "advantage", facebook: true, instagram: true },
-  ad: { destination: "lead_form", url: "", primaryText: "", headline: "", description: "", cta: "GET_QUOTE" },
+  ad: { destination: "lead_form", url: "", primaryText: "", headline: "", description: "", cta: "GET_QUOTE", format: "single", media: {}, cardIdeas: [], carousel: { cards: [], optimizeOrder: true, endCard: false } },
 });
 
 /** Section is "done" enough to show a tick in the rail. */
@@ -136,7 +159,10 @@ export function sectionComplete(id: SectionId, d: Draft): boolean {
     case "creative":
       return (
         d.ad.primaryText.trim() !== "" &&
-        d.ad.headline.trim() !== "" &&
+        mediaReady(d) &&
+        (d.ad.format === "carousel"
+          ? d.ad.carousel.cards.length >= CAROUSEL_MIN && d.ad.carousel.cards.every(cardReady)
+          : d.ad.headline.trim() !== "") &&
         (d.ad.destination !== "website" || /^https?:\/\/\S+\.\S+/.test(d.ad.url))
       );
     case "review":
@@ -167,11 +193,11 @@ export const PLANNED: Partial<Record<SectionId, string[]>> = {
   ],
   placements: ["Per-position control (Feed, Stories, Reels, right column)", "Placement preview per position"],
   creative: [
-    "Image upload with 1:1, 4:5 and 9:16 crops (Supabase Storage → Meta)",
+    "Crop / trim editor for images and video",
     "Rewrite / more variations of the AI copy",
     "Instant form builder (questions, privacy link, thank-you screen)",
     "WhatsApp, call and Messenger destinations",
-    "Carousel and video formats, A/B variants",
+    "A/B variants (two images or two headlines)",
     "Live mockups for Feed, Stories and Reels",
   ],
   review: ["Check with Meta (validate-only) before launch", "Launch paused by default, with readiness checks for the ad account"],

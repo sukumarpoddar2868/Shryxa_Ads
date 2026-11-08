@@ -53,7 +53,6 @@ export function StartSection({ draft, update, clients, isAgency, goTo }: Section
         cities: s.cities,
         scope: s.scope,
         currency: draft.campaign.currency,
-        idealCustomer: s.idealCustomer.trim() || undefined,
       });
       if (!r.ok) {
         setError(r.error);
@@ -85,6 +84,14 @@ export function StartSection({ draft, update, clients, isAgency, goTo }: Section
           headline: c.headline,
           description: c.description ?? "",
           cta: c.call_to_action,
+          cardIdeas: c.carousel_cards,
+          // Already a carousel? Refresh card text, keep the uploaded images.
+          carousel: {
+            ...d.ad.carousel,
+            cards: d.ad.carousel.cards.map((card, i) =>
+              c.carousel_cards[i] ? { ...card, headline: c.carousel_cards[i].headline, description: c.carousel_cards[i].description } : card,
+            ),
+          },
         },
       }));
       setNotice(
@@ -222,21 +229,6 @@ export function StartSection({ draft, update, clients, isAgency, goTo }: Section
               value={s.offer}
               onChange={(v) => set(update, "setup", { offer: v })}
               placeholder="e.g. ITR filing for FY 2025-26 from ₹999. Deadline 31 July — avoid the ₹5,000 late fee."
-            />
-          </Field>
-          <Field
-            id="idealCustomer"
-            label="Describe your ideal customer (optional)"
-            error={fe("idealCustomer")}
-            hint="AI uses this for age, gender, phone type and interests. Mention iPhone or Android to target by phone."
-          >
-            <TextArea
-              id="idealCustomer"
-              max={1000}
-              rows={2}
-              value={s.idealCustomer}
-              onChange={(v) => set(update, "setup", { idealCustomer: v })}
-              placeholder="e.g. Salaried professionals 28–45 with iPhones, mostly working in IT parks."
             />
           </Field>
         </Group>

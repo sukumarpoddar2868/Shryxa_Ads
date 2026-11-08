@@ -8,7 +8,7 @@ import { LEAD_FORM_REF, PLACEHOLDERS, substitute, type Operation } from "./build
 import { buildFormPayload } from "./lead-form.ts";
 import { pyDumpsSorted } from "./pyjson.ts";
 import type { RunResult } from "./run-result.ts";
-import type { CampaignSpec } from "./schema.ts";
+import { adLink, type CampaignSpec } from "./schema.ts";
 
 export function mockFormId(payload: Parameters<typeof pyDumpsSorted>[0]): string {
   return "form_" + createHash("md5").update(pyDumpsSorted(payload)).digest("hex").slice(0, 14);
@@ -20,7 +20,7 @@ export function runMock(spec: CampaignSpec, ops: Operation[]): RunResult {
 
   if (spec.lead_form) {
     const oss = spec.ad.creative.object_story_spec;
-    const payload = buildFormPayload(spec.lead_form, oss.link_data.link);
+    const payload = buildFormPayload(spec.lead_form, adLink(spec));
     const id = mockFormId(payload);
     result.steps.push({ step: 0, resourceType: "lead_form", endpoint: `${oss.page_id}/leadgen_forms`, payload, id });
     result.ids.lead_form = id;

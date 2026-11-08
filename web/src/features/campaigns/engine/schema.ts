@@ -188,8 +188,17 @@ export const CallToAction = z.object({
   value_lead_gen_form_id: z.string().nullish(),
 });
 
+/** One carousel card → link_data.child_attachments[]. */
+export const CarouselCard = z.object({
+  image_hash: z.string(), // 1:1, from /adimages
+  name: z.string(), // card headline
+  description: z.string().nullish(),
+  link: z.string().nullish(), // defaults to link_data.link
+});
+
 export const LinkData = z.object({
-  image_hash: z.string(), // 1:1 — FB Feed + IG Feed; from a prior /adimages upload
+  // 1:1 — FB Feed + IG Feed; from a prior /adimages upload. Not used by carousels.
+  image_hash: z.string().nullish(),
   // Optional placement variants → builder emits asset_feed_spec.
   image_hash_story: z.string().nullish(), // 9:16 — Stories + Reels
   image_hash_portrait: z.string().nullish(), // 4:5 — IG Feed portrait
@@ -198,12 +207,40 @@ export const LinkData = z.object({
   description: z.string().nullish(),
   link: z.string(),
   call_to_action: CallToAction,
+  // Carousel: 2–10 cards. When present, image variants are ignored.
+  child_attachments: z.array(CarouselCard).min(2).max(10).nullish(),
+  multi_share_optimized: z.boolean().nullish(), // let Meta order cards by performance
+  multi_share_end_card: z.boolean().nullish(), // extra end card with the Page profile
+}).superRefine((ld, ctx) => {
+  if (!ld.image_hash && !ld.child_attachments?.length) {
+    ctx.addIssue({ code: "custom", message: "image_hash is required (or carousel cards)", path: ["image_hash"] });
+  }
+});
+
+/** Video ad → object_story_spec.video_data. The video is uploaded to /advideos first. */
+export const VideoData = z.object({
+  video_id: z.string(),
+  // Cover image: hash from /adimages (preferred) or a public URL.
+  image_hash: z.string().nullish(),
+  image_url: z.string().nullish(),
+  message: z.string(), // primary text
+  title: z.string(), // headline
+  link_description: z.string().nullish(),
+  link: z.string(), // where the CTA goes (website ads)
+  call_to_action: CallToAction,
+}).superRefine((v, ctx) => {
+  if (!v.image_hash && !v.image_url) ctx.addIssue({ code: "custom", message: "video needs a cover image", path: ["image_hash"] });
 });
 
 export const ObjectStorySpec = z.object({
   page_id: z.string(),
   instagram_actor_id: z.string().nullish(),
-  link_data: LinkData,
+  link_data: LinkData.nullish(),
+  video_data: VideoData.nullish(),
+}).superRefine((o, ctx) => {
+  if (Boolean(o.link_data) === Boolean(o.video_data)) {
+    ctx.addIssue({ code: "custom", message: "set exactly one of link_data or video_data", path: ["link_data"] });
+  }
 });
 
 export const AdCreativeInput = z.object({
@@ -236,6 +273,12 @@ export const LeadFormSpec = z.object({
 });
 
 /* ---------- Root ---------- */
+
+/** The ad's main link (thank-you fallback for lead forms). */
+export function adLink(spec: { ad: { creative: { object_story_spec: { link_data?: { link: string } | null; video_data?: { link: string } | null } } } }): string {
+  const o = spec.ad.creative.object_story_spec;
+  return o.link_data?.link ?? o.video_data?.link ?? "";
+}
 
 export const CampaignSpec = z.object({
   ad_account_id: z.string(), // digits only; builders prepend act_

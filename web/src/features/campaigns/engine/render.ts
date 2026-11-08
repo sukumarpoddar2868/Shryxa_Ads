@@ -61,6 +61,14 @@ export type RenderInput = {
   launchStatus?: "PAUSED" | "ACTIVE";
   /** Phone OS targeting. Not "all" ⇒ mobile only, manual placements. */
   deviceOs?: "all" | "android" | "ios";
+  /** Carousel cards (2–10). When given, the ad is a carousel. */
+  carousel?: {
+    cards: { imageHash: string; headline: string; description?: string | null; link?: string | null }[];
+    optimizeOrder?: boolean;
+    endCard?: boolean;
+  } | null;
+  /** Video ad: Meta video id (from /advideos) + cover image hash. Replaces the image/carousel. */
+  video?: { videoId: string; thumbnailHash: string } | null;
   /** Manual placements; omitted = Advantage+ (all platforms). */
   publisherPlatforms?: ("facebook" | "instagram")[];
   /** Name suffix (YYMMDD-HHMMSS) so retries don't collide in Ads Manager. */
@@ -156,6 +164,19 @@ export function renderSpec(input: RenderInput): CampaignSpecInput {
   if (adCopy.description) linkData.description = truncate(adCopy.description, 125);
   if (input.imageHashStory) linkData.image_hash_story = input.imageHashStory;
   if (input.imageHashPortrait) linkData.image_hash_portrait = input.imageHashPortrait;
+  if (input.carousel && input.carousel.cards.length) {
+    linkData.child_attachments = input.carousel.cards.map((c) => ({
+      image_hash: c.imageHash,
+      name: truncate(c.headline, 40),
+      ...(c.description ? { description: truncate(c.description, 125) } : {}),
+      ...(c.link ? { link: c.link } : {}),
+    }));
+    linkData.multi_share_optimized = input.carousel.optimizeOrder ?? true;
+    linkData.multi_share_end_card = input.carousel.endCard ?? false;
+    delete linkData.image_hash;
+    delete linkData.image_hash_story;
+    delete linkData.image_hash_portrait;
+  }
 
   const spec: JsonObject = {
     ad_account_id: String(client.ad_account_id).replace(/^act_/, ""),
@@ -169,13 +190,25 @@ export function renderSpec(input: RenderInput): CampaignSpecInput {
     },
     ad_set: adSet,
     ad: {
-      name: `${name} — single image ${stamp}`,
+      name: `${name} — ${input.video ? "video" : input.carousel?.cards.length ? "carousel" : "single image"} ${stamp}`,
       creative: {
         name: `${name} creative ${stamp}`,
         object_story_spec: {
           page_id: pageId,
           ...(client.instagram_actor_id ? { instagram_actor_id: String(client.instagram_actor_id) } : {}),
-          link_data: linkData,
+          ...(input.video
+            ? {
+                video_data: {
+                  video_id: input.video.videoId,
+                  image_hash: input.video.thumbnailHash,
+                  message: linkData.message,
+                  title: linkData.name,
+                  ...(linkData.description ? { link_description: linkData.description } : {}),
+                  link: linkTarget,
+                  call_to_action: linkData.call_to_action,
+                },
+              }
+            : { link_data: linkData }),
         },
       },
     },

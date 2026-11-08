@@ -60,7 +60,7 @@ export async function launchCampaign(
   const ops = buildAll(spec);
   if (mode === "mock") return { ok: true, spec, result: runMock(spec, ops) };
 
-  if (!input.imageHash) return { ok: false, error: "Upload an image first.", spec };
+  if (!input.imageHash && !input.video && !input.carousel?.cards.length) return { ok: false, error: "Upload your image or video first.", spec };
   try {
     checkPilotGuard(ops, metaEnv().CONVERSION_TRACKING_VERIFIED);
   } catch (e) {

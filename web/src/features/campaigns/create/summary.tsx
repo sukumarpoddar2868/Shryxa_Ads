@@ -32,7 +32,8 @@ export function Summary({ draft: d, clients }: { draft: Draft; clients: ClientOp
       level: "Ad",
       items: [
         ["Goes to", d.ad.destination === "website" ? d.ad.url || "Website" : "Instant form"],
-        ["Headline", d.ad.headline || undefined],
+        ["Format", d.ad.format === "carousel" ? `Carousel · ${d.ad.carousel.cards.length} cards` : d.ad.format === "video" ? "Video" : "Single image"],
+        ["Headline", d.ad.format === "carousel" ? d.ad.carousel.cards[0]?.headline || undefined : d.ad.headline || undefined],
       ],
     },
   ];

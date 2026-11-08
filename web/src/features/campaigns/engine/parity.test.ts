@@ -86,6 +86,51 @@ test("phone OS targeting reaches the ad set payload", () => {
   assert.equal("user_os" in plain, false);
 });
 
+test("carousel cards become child_attachments", () => {
+  const c = fixtures.valid.find((x) => x.name === "render_leadform_inr_variants")!;
+  const spec = validateSpec(
+    renderSpec({
+      ...toRenderInput(c.render_kwargs!),
+      carousel: { cards: [{ imageHash: "h1", headline: "Salaried ITR" }, { imageHash: "h2", headline: "GST filing", description: "Monthly returns", link: "https://x.in/gst" }], endCard: true },
+    }),
+  );
+  type LD = { image_hash?: string; link: string; child_attachments: Record<string, unknown>[]; multi_share_optimized: boolean; multi_share_end_card: boolean };
+  const creative = buildAll(spec)[2].payload.creative as { asset_feed_spec?: unknown; object_story_spec: { link_data: LD } };
+  const ld = creative.object_story_spec.link_data;
+  assert.equal(creative.asset_feed_spec, undefined, "no placement variants for carousels");
+  assert.equal(ld.image_hash, undefined);
+  assert.equal(ld.child_attachments.length, 2);
+  assert.deepEqual(ld.child_attachments[1], {
+    image_hash: "h2",
+    name: "GST filing",
+    description: "Monthly returns",
+    link: "https://x.in/gst",
+    call_to_action: { type: "GET_QUOTE", value: { lead_gen_form_id: "REPLACE_AFTER_LEAD_FORM_CREATED" } },
+  });
+  assert.equal(ld.child_attachments[0].link, ld.link, "card link defaults to the ad link");
+  assert.equal(ld.multi_share_optimized, true);
+  assert.equal(ld.multi_share_end_card, true);
+  assert.throws(() => validateSpec(renderSpec({ ...toRenderInput(c.render_kwargs!), carousel: { cards: [{ imageHash: "h1", headline: "one" }] } })));
+});
+
+test("video ads use video_data with a cover image", () => {
+  const c = fixtures.valid.find((x) => x.name === "render_website_inr_epicenters")!;
+  const spec = validateSpec(renderSpec({ ...toRenderInput(c.render_kwargs!), video: { videoId: "v123", thumbnailHash: "thumb" } }));
+  const oss = (buildAll(spec)[2].payload.creative as { object_story_spec: Record<string, unknown> }).object_story_spec;
+  assert.equal(oss.link_data, undefined);
+  type LD = { message: string; name: string; description: string };
+  const ld = (c.input as { ad: { creative: { object_story_spec: { link_data: LD } } } }).ad.creative.object_story_spec.link_data;
+  assert.deepEqual(oss.video_data, {
+    video_id: "v123",
+    image_hash: "thumb",
+    message: ld.message,
+    title: ld.name,
+    link_description: ld.description,
+    call_to_action: { type: "GET_QUOTE", value: { link: "https://kapoorca.in/itr" } },
+  });
+  assert.match(String(buildAll(spec)[2].payload.name), / — video /);
+});
+
 test("pilot guard: blocks website leads, allows instant form", () => {
   const leadCase = fixtures.valid.find((c) => c.name === "render_leadform_inr_variants")!;
   const ops = buildAll(validateSpec(leadCase.input));

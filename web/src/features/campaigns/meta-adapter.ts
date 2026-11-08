@@ -3,7 +3,7 @@ import { graphDelete, graphPost, MetaApiError } from "@/lib/meta/graph";
 import { LEAD_FORM_REF, PLACEHOLDERS, substitute, type JsonObject, type Operation } from "./engine/builders.ts";
 import { buildFormPayload } from "./engine/lead-form.ts";
 import type { RunResult, RunStep } from "./engine/run-result.ts";
-import type { CampaignSpec } from "./engine/schema.ts";
+import { adLink, type CampaignSpec } from "./engine/schema.ts";
 
 /**
  * Real Marketing API adapter. Port of the Python `MetaAdapter`.
@@ -56,7 +56,7 @@ export async function runMeta(
   try {
     if (spec.lead_form) {
       const oss = spec.ad.creative.object_story_spec;
-      const payload = buildFormPayload(spec.lead_form, oss.link_data.link);
+      const payload = buildFormPayload(spec.lead_form, adLink(spec));
       const endpoint = `${oss.page_id}/leadgen_forms`;
       if (validateOnly) {
         // No validate_only for forms; the run stops at the campaign anyway.

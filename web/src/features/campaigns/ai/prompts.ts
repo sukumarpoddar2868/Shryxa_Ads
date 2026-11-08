@@ -112,7 +112,48 @@ export type CopySuggestion = {
   device_os: (typeof DEVICE_OS)[number];
   /** One line on why this audience — shown to the user. */
   audience_why: string;
+  /** Ideas for carousel cards (used if the user picks Carousel). */
+  carousel_cards: CardIdea[];
 };
+
+export type CardIdea = { headline: string; description: string };
+
+/** Clean model card output: non-empty, ≤40-char headlines, unique. */
+export function sanitizeCards(raw: unknown, max = 10): CardIdea[] {
+  const seen = new Set<string>();
+  const out: CardIdea[] = [];
+  for (const c of Array.isArray(raw) ? raw : []) {
+    const o = (c ?? {}) as Record<string, unknown>;
+    const headline = squash(o.headline, 40);
+    if (!headline || seen.has(headline.toLowerCase())) continue;
+    seen.add(headline.toLowerCase());
+    out.push({ headline, description: squash(o.description, 60) });
+    if (out.length >= max) break;
+  }
+  return out;
+}
+
+/** Carousel cards on demand (Creative → "Write cards with AI"). */
+export function cardsPrompt(p: { businessName: string; about: string; offer: string; destination: Destination; count: number }): string {
+  return `Write ${p.count} carousel cards for a Meta (Facebook + Instagram) ad.
+
+Business: ${p.businessName || "(not provided)"}
+About: ${p.about || "(not provided)"}
+Offer: ${p.offer || "(not provided)"}
+Goal: ${GOAL_GUIDE[p.destination]}
+
+Each card is one swipeable panel with its own image. Make every card a DIFFERENT angle:
+a specific service or product, a benefit, a proof point (experience, reviews implied by the text),
+or the offer/price. Card 1 should hook; the last card should push the action.
+
+STRICT RULES:
+  • headline: MAXIMUM 32 characters, specific, no emojis, no business name unless needed.
+  • description: MAXIMUM 50 characters, optional detail (price, time, place).
+  • Exactly ${p.count} cards, no duplicates.
+
+Return one JSON object:
+{ "cards": [ { "headline": "...", "description": "..." } ] }`;
+}
 
 /** Sensible daily range for a local campaign, in major units. */
 export const BUDGET_RANGE: Record<Currency, [number, number]> = { INR: [300, 3000], USD: [10, 100] };
@@ -142,7 +183,6 @@ export function copyPrompt(p: {
   destination: Destination;
   ctas: readonly CtaType[];
   locationCount: number;
-  idealCustomer?: string;
 }): string {
   const [lo, hi] = BUDGET_RANGE[p.currency];
   return `You are setting up a Meta (Facebook + Instagram) ad campaign for a local business.
@@ -153,9 +193,6 @@ Business:
 
 Product / offer for this campaign:
   ${p.offer || "(not provided)"}
-
-Ideal customer (from the business owner — follow it closely when given):
-  ${p.idealCustomer?.trim() || "(not provided — infer from the business and offer)"}
 
 Currency: ${p.currency}
 Campaign goal: ${GOAL_GUIDE[p.destination]}
@@ -172,10 +209,14 @@ STRICT RULES:
   • interest_targeting: exactly 3–5 relevant Meta interest names (topics people care about —
     never phone brands or device names; phone type is handled by device_os).
   • age_min / age_max: integers ${AGE_MIN}–${AGE_MAX} for the likely buyers.
-  • gender: exactly one of "any", "male", "female". Use "any" unless the offer or ideal customer is clearly one gender.
-  • device_os: exactly one of "all", "android", "ios". Use "ios" ONLY if the ideal customer mentions iPhone/Apple users
-    or clearly asks for premium / high-income buyers; "android" ONLY if Android is mentioned. Otherwise "all".
+  • First infer the ideal customer from the business and offer (who buys, their age, income level, lifestyle).
+  • gender: exactly one of "any", "male", "female". Use "any" unless the offer is clearly for one gender.
+  • device_os: exactly one of "all", "android", "ios". Default "all". Use "ios" ONLY when the business or offer
+    mentions iPhone/Apple or is clearly premium / luxury / high-ticket (where iPhone users are the likely buyers);
+    "android" ONLY if Android is mentioned. When unsure, "all" — never narrow the audience without a clear reason.
   • audience_why: one short sentence explaining the age, gender and phone choice.
+  • carousel_cards: 4 cards for a carousel version of this ad — each a different service, benefit or
+    proof point; headline MAXIMUM 32 characters, description MAXIMUM 50 characters.
 
 OUTPUT RULES:
   • One compact JSON object, no Markdown, no emojis, no line breaks inside strings.
@@ -193,7 +234,8 @@ OUTPUT RULES:
   "age_max": 55,
   "gender": "any",
   "device_os": "all",
-  "audience_why": "..."
+  "audience_why": "...",
+  "carousel_cards": [{ "headline": "...", "description": "..." }]
 }`;
 }
 
@@ -247,6 +289,7 @@ export function sanitizeCopy(
     gender: (GENDERS as readonly string[]).includes(gender) ? (gender as CopySuggestion["gender"]) : "any",
     device_os: (DEVICE_OS as readonly string[]).includes(device) ? (device as CopySuggestion["device_os"]) : "all",
     audience_why: squash(raw.audience_why, 200),
+    carousel_cards: sanitizeCards(raw.carousel_cards, 10),
   };
 }
 
@@ -273,5 +316,6 @@ export function fallbackCopy(p: {
     gender: "any",
     device_os: "all",
     audience_why: "",
+    carousel_cards: [],
   };
 }

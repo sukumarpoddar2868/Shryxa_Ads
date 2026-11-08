@@ -1,14 +1,17 @@
 "use client";
 
 import { useState, type ReactNode } from "react";
-import { Image as ImageIcon, Lock, Sparkles, Wrench, X } from "lucide-react";
+import { Lock, Sparkles, Wrench, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Field, Input, Select, inputClass } from "@/components/ui/field";
 import { Callout, Chip } from "@/components/ui/surface";
 import { cn } from "@/lib/cn";
 import { CTA_FOR_LEAD_FORM, CTA_FOR_WEBSITE, CURRENCIES, CURRENCY, MEDIA_SLOTS } from "../engine/presets.ts";
 import type { CtaType } from "../engine/schema.ts";
-import { PLANNED, type Draft, type SectionId } from "./blueprint";
+import { CarouselEditor, starterCards } from "./carousel-editor";
+import { MediaSlot } from "../media/media-slot";
+import { MEDIA_RULES } from "../media/rules";
+import { CAROUSEL_MIN, PLANNED, cardReady, mediaReady, type AdFormat, type Draft, type SectionId } from "./blueprint";
 import type { SectionProps } from "./create-campaign";
 
 /* ------------------------------------------------------------------ shared */
@@ -391,34 +394,82 @@ export function CreativeSection({ draft, update, clients, goTo }: SectionProps) 
           </div>
         </Group>
 
-        <Group title="Media" hint="Single image for now. Square is required; the others make each placement look right.">
-          <div className="grid gap-3 sm:grid-cols-3">
-            {MEDIA_SLOTS.map((s) => (
-              <div key={s.key} className="flex flex-col items-center gap-2 rounded-card bg-lavender-soft p-4 text-center">
-                <div
-                  className="grid w-full max-w-[120px] place-items-center rounded-input bg-paper text-ink-muted ring-1 ring-dashed ring-line"
-                  style={{ aspectRatio: s.aspect.replace(":", "/") }}
-                >
-                  <ImageIcon className="size-5" aria-hidden />
-                </div>
-                <p className="text-[13px] font-bold">
-                  {s.label} {s.required && <span className="text-tomato-700">*</span>}
-                </p>
-                <p className="text-[12px] text-ink-muted">
-                  {s.size} · {s.aspect}
-                </p>
+        <Group title="Media" hint="Choose the ad format, then upload your files.">
+          <Segmented
+            label="Ad format"
+            value={ad.format}
+            onChange={(v: AdFormat) =>
+              update((d) => ({
+                ...d,
+                ad: {
+                  ...d.ad,
+                  format: v,
+                  carousel:
+                    v === "carousel" && d.ad.carousel.cards.length < CAROUSEL_MIN
+                      ? { ...d.ad.carousel, cards: starterCards(d.ad.cardIdeas, d.ad.headline) }
+                      : d.ad.carousel,
+                },
+              }))
+            }
+            options={[
+              { value: "single", label: "Single image" },
+              { value: "carousel", label: "Carousel" },
+              { value: "video", label: "Video" },
+            ]}
+          />
+          {ad.format === "carousel" && (
+            <>
+              <p className="text-[13px] text-ink-muted">2–10 swipeable cards, each with its own image and headline. Great for showing several services or products.</p>
+              <CarouselEditor draft={draft} update={update} />
+            </>
+          )}
+          {ad.format === "single" && (
+            <>
+              <p className="text-[13px] text-ink-muted">Square is required; the others make each placement look right. {MEDIA_RULES.image.label}.</p>
+              <div className="grid gap-3 sm:grid-cols-3">
+                {MEDIA_SLOTS.map((s) => (
+                  <div key={s.key} className="rounded-card bg-lavender-soft p-4">
+                    <MediaSlot
+                      clientId={draft.clientId}
+                      kind="image"
+                      aspect={s.aspect}
+                      label={s.label}
+                      note={`${s.size} · ${s.aspect}`}
+                      required={s.required}
+                      value={ad.media[s.key]}
+                      onChange={(ref) => set(update, "ad", { media: { ...ad.media, [s.key]: ref } })}
+                    />
+                  </div>
+                ))}
               </div>
-            ))}
-          </div>
-          <Button type="button" variant="secondary" className="self-start" disabled>
-            Upload images (coming soon)
-          </Button>
+            </>
+          )}
+          {ad.format === "video" && (
+            <>
+              <p className="text-[13px] text-ink-muted">
+                Vertical 9:16 fills Reels and Stories; Meta adapts it for feeds. {MEDIA_RULES.video.label}. A cover image is taken from the video automatically.
+              </p>
+              <div className="rounded-card bg-lavender-soft p-4 sm:max-w-xs">
+                <MediaSlot
+                  clientId={draft.clientId}
+                  kind="video"
+                  aspect="9:16"
+                  label="Video"
+                  note="1080×1920 · 9:16 · 5–60 s recommended"
+                  required
+                  value={ad.media.video}
+                  onChange={(ref) => set(update, "ad", { media: { ...ad.media, video: ref } })}
+                />
+              </div>
+            </>
+          )}
         </Group>
 
         <Group title="Text">
           <Field id="primaryText" label="Primary text">
             <TextArea id="primaryText" max={400} value={ad.primaryText} onChange={(v) => set(update, "ad", { primaryText: v })} placeholder="What's the offer, and why now?" />
           </Field>
+          {ad.format === "single" && (
           <div className="grid gap-4 sm:grid-cols-2">
             <Field id="headline" label="Headline">
               <TextArea id="headline" rows={2} max={40} value={ad.headline} onChange={(v) => set(update, "ad", { headline: v })} />
@@ -427,6 +478,7 @@ export function CreativeSection({ draft, update, clients, goTo }: SectionProps) 
               <TextArea id="description" rows={2} max={125} value={ad.description} onChange={(v) => set(update, "ad", { description: v })} />
             </Field>
           </div>
+          )}
           {draft.generated && (
             <p className="flex items-center gap-2 text-[13px] text-ink-muted">
               <Sparkles className="size-4" aria-hidden /> Written by AI in Start — edit anything.
@@ -472,7 +524,18 @@ export function ReviewSection({ draft, goTo }: SectionProps) {
     { id: "start", label: "Goal chosen and campaign drafted with AI", ok: draft.objective !== null && draft.generated },
     { id: "name-budget", label: "Name and budget set", ok: draft.campaign.name.trim() !== "" && Number(draft.campaign.amount) > 0 },
     { id: "audience", label: "At least one location", ok: draft.audience.locations.length > 0 },
-    { id: "creative", label: "Primary text and headline written", ok: !!draft.ad.primaryText.trim() && !!draft.ad.headline.trim() },
+    {
+      id: "creative" as const,
+      label: draft.ad.format === "video" ? "Video uploaded" : draft.ad.format === "carousel" ? "An image on every carousel card" : "Square feed image uploaded",
+      ok: mediaReady(draft),
+    },
+    draft.ad.format === "carousel"
+      ? {
+          id: "creative" as const,
+          label: `Primary text and ${draft.ad.carousel.cards.length} carousel card headlines`,
+          ok: !!draft.ad.primaryText.trim() && draft.ad.carousel.cards.length >= CAROUSEL_MIN && draft.ad.carousel.cards.every(cardReady),
+        }
+      : { id: "creative" as const, label: "Primary text and headline written", ok: !!draft.ad.primaryText.trim() && !!draft.ad.headline.trim() },
   ];
   const allOk = checks.every((c) => c.ok);
   return (
