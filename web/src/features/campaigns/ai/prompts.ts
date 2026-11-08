@@ -190,6 +190,10 @@ const GOAL_GUIDE: Record<Destination, string> = {
   instagram_dm: `CHATS in Instagram Direct — tapping opens a DM with the business's Instagram.
   • Casual, visual tone; invite them to DM for details, prices or booking.
   • Headline = what they get by sending a DM.`,
+  instagram_profile: `INSTAGRAM PROFILE VISITS — tapping opens the business's Instagram profile.
+  • Give a reason to check the profile and follow: new collection, daily offers, behind the scenes, reels.
+  • Visual, casual tone. No form or call-back promise.
+  • Headline = what they'll see on the profile.`,
   call: `PHONE CALLS — tapping calls the business directly.
   • Give a reason to call now (free consultation, instant quote, book today).
   • Mention hours/availability only if given. Keep it short and local.

@@ -192,6 +192,13 @@ test("routing per objective × destination matches Meta's documented setups", ()
   const ig = build({ objective: "OUTCOME_ENGAGEMENT", destination: "instagram_dm" });
   assert.deepEqual(ig.ld.call_to_action, { type: "INSTAGRAM_MESSAGE", value: { app_destination: "INSTAGRAM_DIRECT" } });
 
+  const igp = build({ objective: "OUTCOME_TRAFFIC", destination: "instagram_profile", instagramUsername: "@bloom.boutique" });
+  assert.deepEqual([igp.adset.destination_type, igp.adset.optimization_goal], ["INSTAGRAM_PROFILE", "PROFILE_VISIT"]);
+  assert.deepEqual(igp.adset.promoted_object, { page_id: "1033691806503292" });
+  assert.deepEqual((igp.adset.targeting as Record<string, unknown>).publisher_platforms, ["instagram"]);
+  assert.deepEqual(igp.ld.call_to_action, { type: "VIEW_INSTAGRAM_PROFILE", value: { link: "https://www.instagram.com/bloom.boutique" } });
+  assert.doesNotThrow(() => checkPilotGuard(igp.ops, false));
+
   const aw = build({ objective: "OUTCOME_AWARENESS", destination: "none", frequencyCap: 2, landingPageUrl: null, ctaType: "LEARN_MORE" });
   assert.equal(aw.adset.optimization_goal, "REACH");
   assert.equal("destination_type" in aw.adset, false);

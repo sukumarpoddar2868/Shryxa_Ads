@@ -7,7 +7,7 @@ import { metaLinks } from "@/features/meta-connect/discovery";
 import { getConnectionToken } from "@/features/meta-connect/store";
 import { MetaApiError, graphGet } from "@/lib/meta/graph";
 import { CTA_TYPES } from "./engine/schema.ts";
-import { CONVERSION_EVENTS, CURRENCIES, DESTINATIONS } from "./engine/presets.ts";
+import { CONVERSION_EVENTS, CTA_FOR, CURRENCIES, DESTINATIONS } from "./engine/presets.ts";
 import { launchCampaign, type LaunchInput } from "./launch";
 import { pushImage, pushVideo } from "./media/push";
 import { createItemToken, itemUrl } from "./whatsapp/item-link";
@@ -143,6 +143,9 @@ function problems(p: z.output<typeof LaunchPayload>): string[] {
     if (!perItem && w.style === "questions" && !w.questions.some(Boolean)) out.push("Add at least one quick question for WhatsApp.");
   }
   if (p.ad.destination === "none" && p.objective !== "OUTCOME_AWARENESS") out.push("Pick where people should go.");
+  // Every button must be one Meta accepts for this destination (per-item WhatsApp links use "Contact us").
+  const perItemWa = p.ad.destination === "whatsapp" && p.ad.format === "carousel" && p.ad.whatsapp.perItem;
+  if (!perItemWa && !CTA_FOR[p.ad.destination].includes(p.ad.cta)) out.push("That button isn't available for this destination — pick another in Creative.");
   if (p.objective === "OUTCOME_AWARENESS" && p.ad.destination !== "none") out.push("Awareness campaigns don't use a destination.");
   if (p.ad.destination === "lead_form" && !p.ad.leadForm) out.push("Finish the instant form (privacy link + contact fields).");
   if (p.ad.format === "single" && !p.ad.media.feed) out.push("Upload the square feed image.");
@@ -173,7 +176,9 @@ export async function launchDraftAction(raw: LaunchPayload, mode: "validate" | "
   if (!client.ad_account_id || !client.page_id) return fail("Pick this client's ad account and Facebook Page first.");
   const token = client.meta_connection_id ? await getConnectionToken(user.id, client.meta_connection_id) : null;
   if (!token) return fail("This client's Facebook connection is missing or expired. Reconnect it on the client page.");
-  if (p.ad.destination === "instagram_dm" && !client.instagram_actor_id) return fail("Connect this client's Instagram account first (client page → assets).");
+  if ((p.ad.destination === "instagram_dm" || p.ad.destination === "instagram_profile") && !client.instagram_actor_id) {
+    return fail("Connect this client's Instagram account first (client page → assets).");
+  }
 
   // Website conversions: the Pixel must exist and be recording activity.
   const websiteConversions = p.ad.destination === "website" && (p.objective === "OUTCOME_SALES" || p.objective === "OUTCOME_LEADS");
@@ -262,6 +267,7 @@ export async function launchDraftAction(raw: LaunchPayload, mode: "validate" | "
     advantageAudience: p.audience.advantage,
     deviceOs: p.audience.device,
     audiences: p.audience.include.length || p.audience.exclude.length ? { include: p.audience.include, exclude: p.audience.exclude } : null,
+    instagramUsername: client.instagram_username,
     phoneNumber: p.ad.destination === "call" ? p.ad.phone.replace(/[^\d+]/g, "") : null,
     whatsappNumber: p.ad.destination === "whatsapp" && p.ad.whatsappNumber.trim() ? p.ad.whatsappNumber.replace(/[^\d+]/g, "") : null,
     pixel: websiteConversions ? { pixelId: client.pixel_id!, event: p.ad.conversionEvent } : null,

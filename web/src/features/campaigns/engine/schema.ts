@@ -56,7 +56,7 @@ export const CampaignInput = z
 export const OPTIMIZATION_GOALS = [
   "LINK_CLICKS", "IMPRESSIONS", "REACH", "LANDING_PAGE_VIEWS",
   "OFFSITE_CONVERSIONS", "VALUE", "THRUPLAY", "LEAD_GENERATION",
-  "APP_INSTALLS", "CONVERSATIONS", "QUALITY_CALL", "QUALITY_LEAD",
+  "APP_INSTALLS", "CONVERSATIONS", "QUALITY_CALL", "QUALITY_LEAD", "PROFILE_VISIT",
 ] as const;
 export const BILLING_EVENTS = ["IMPRESSIONS", "LINK_CLICKS", "THRUPLAY", "APP_INSTALLS"] as const;
 export const BID_STRATEGIES = [
@@ -66,7 +66,7 @@ export const BID_STRATEGIES = [
 export const PLATFORMS = ["facebook", "instagram", "messenger", "audience_network"] as const;
 export const DESTINATION_TYPES = [
   "WEBSITE", "APP", "MESSENGER", "INSTAGRAM_DIRECT",
-  "WHATSAPP", "ON_AD", "ON_POST", "PHONE_CALL",
+  "WHATSAPP", "ON_AD", "ON_POST", "PHONE_CALL", "INSTAGRAM_PROFILE",
 ] as const;
 
 /** A pin with a radius → targeting.geo_locations.custom_locations[]. */
@@ -187,7 +187,7 @@ export const CTA_TYPES = [
   "GET_OFFER", "CONTACT_US", "APPLY_NOW", "SUBSCRIBE", "DONATE_NOW",
   "ORDER_NOW", "GET_QUOTE", "BUY_NOW", "INSTALL_APP",
   // Messaging / call destinations
-  "WHATSAPP_MESSAGE", "MESSAGE_PAGE", "INSTAGRAM_MESSAGE", "CALL_NOW",
+  "WHATSAPP_MESSAGE", "MESSAGE_PAGE", "INSTAGRAM_MESSAGE", "CALL_NOW", "VIEW_INSTAGRAM_PROFILE",
 ] as const;
 export type CtaType = (typeof CTA_TYPES)[number];
 

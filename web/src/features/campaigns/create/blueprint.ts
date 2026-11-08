@@ -147,7 +147,10 @@ export function destinationOptions(objective: ObjectiveId, client: ClientCaps): 
         opt("website", "Website form", "Leads fill a form on your website — tracked by your Pixel.", pixel),
       ];
     case "OUTCOME_TRAFFIC":
-      return [opt("website", "Website", "Send people to a page on your website.")];
+      return [
+        opt("website", "Website", "Send people to a page on your website."),
+        opt("instagram_profile", "Instagram profile", "Get profile visits and followers. Runs on Instagram only.", ig),
+      ];
     case "OUTCOME_AWARENESS":
       return [opt("none", "Reach people nearby", "No click goal — Meta shows the ad to as many people in your areas as possible.")];
     case "OUTCOME_ENGAGEMENT":
@@ -171,6 +174,7 @@ export const DESTINATION_LABELS: Record<Destination, string> = {
   call: "Phone call",
   messenger: "Messenger chat",
   instagram_dm: "Instagram Direct",
+  instagram_profile: "Instagram profile",
   none: "Reach (no click goal)",
 };
 
@@ -277,7 +281,7 @@ export const initialDraft = (client: { id: number; name: string; pixelId?: strin
  */
 export function normalizeDraft(d: Draft): Draft {
   const base = initialDraft(null);
-  return {
+  const out: Draft = {
     ...base,
     ...d,
     setup: { ...base.setup, ...d.setup },
@@ -293,6 +297,9 @@ export function normalizeDraft(d: Draft): Draft {
       carousel: { ...base.ad.carousel, ...d.ad?.carousel },
     },
   };
+  // Keep the button valid for the destination (lists can change between versions).
+  if (out.objective && !CTA_FOR[out.ad.destination].includes(out.ad.cta)) out.ad = { ...out.ad, cta: defaultCta(out.objective, out.ad.destination) };
+  return out;
 }
 
 /** Section is "done" enough to show a tick in the rail. */

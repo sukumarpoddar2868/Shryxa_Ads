@@ -366,6 +366,9 @@ export function PlacementsSection({ draft, update, goTo }: SectionProps) {
             onSelect={() => set(update, "placements", { mode: "manual" })}
           />
         </div>
+        {draft.ad.destination === "instagram_profile" && (
+          <Callout>Instagram-profile ads run on Instagram only — Facebook placements are skipped automatically.</Callout>
+        )}
         {phoneTargeting && (
           <Callout>
             You&apos;re targeting {draft.audience.device === "ios" ? "iPhone" : "Android"} users, so placements must be manual.{" "}
@@ -553,6 +556,7 @@ const DESTINATION_CHECK: Record<Draft["ad"]["destination"], string> = {
   call: "Phone number added",
   messenger: "Messenger ready",
   instagram_dm: "Instagram Direct ready",
+  instagram_profile: "Instagram profile ready",
   none: "Reach campaign — no destination needed",
 };
 

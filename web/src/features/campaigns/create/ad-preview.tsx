@@ -14,14 +14,17 @@ import type { ClientOption } from "./create-campaign";
  * Neutral styling — no platform logos.
  */
 
-type Placement = "fb" | "ig" | "story" | "form" | "whatsapp" | "call";
+type Placement = "fb" | "ig" | "story" | "form" | "whatsapp" | "call" | "profile";
 const TABS: { id: Placement; label: string }[] = [
   { id: "fb", label: "Facebook" },
   { id: "ig", label: "Instagram" },
   { id: "story", label: "Stories" },
 ];
 
+/** Meta's on-ad button text (most are just the enum in sentence case). */
 const CTA_TEXT: Record<string, string> = {
+  BOOK_TRAVEL: "Book now",
+  VIEW_INSTAGRAM_PROFILE: "View Instagram profile",
   WHATSAPP_MESSAGE: "Send WhatsApp message",
   MESSAGE_PAGE: "Send message",
   INSTAGRAM_MESSAGE: "Send message",
@@ -152,8 +155,10 @@ export function AdPreview({ draft, client }: { draft: Draft; client?: ClientOpti
         ? [...TABS, { id: "whatsapp" as const, label: "WhatsApp" }]
         : ad.destination === "call"
           ? [...TABS, { id: "call" as const, label: "Call" }]
-          : TABS;
-  const tab = tabs.some((t) => t.id === picked) ? picked : "fb";
+          : ad.destination === "instagram_profile"
+            ? [{ id: "ig" as const, label: "Instagram" }, { id: "story" as const, label: "Stories" }, { id: "profile" as const, label: "Profile" }]
+            : TABS;
+  const tab = tabs.some((t) => t.id === picked) ? picked : tabs[0].id;
   const page = client?.pageName || draft.setup.businessName || "Your Page";
   const igName = client?.instagramUsername || page.toLowerCase().replace(/[^a-z0-9]+/g, "");
   // Per-item WhatsApp links run as plain links with a "Contact us" button.
@@ -165,6 +170,7 @@ export function AdPreview({ draft, client }: { draft: Draft; client?: ClientOpti
     call: ad.phone.trim() || "Phone call",
     messenger: "Messenger",
     instagram_dm: "Instagram",
+    instagram_profile: client?.instagramUsername ? `instagram.com/${client.instagramUsername}` : "Instagram profile",
     none: host(draft.setup.website) || "Facebook Page",
   }[ad.destination];
   const headline = ad.format === "carousel" ? ad.carousel.cards[0]?.headline ?? "" : ad.headline;
@@ -283,6 +289,7 @@ export function AdPreview({ draft, client }: { draft: Draft; client?: ClientOpti
       {tab === "form" && <FormMock draft={draft} page={page} />}
       {tab === "whatsapp" && <WhatsAppMock draft={draft} page={page} />}
       {tab === "call" && <CallMock phone={ad.phone} page={page} />}
+      {tab === "profile" && <ProfileMock draft={draft} username={igName} page={page} />}
 
       <p className="text-center text-[12px] text-ink-muted">
         Approximate preview. Meta may crop or rearrange slightly per device.
@@ -439,6 +446,43 @@ function CallMock({ phone, page }: { phone: string; page: string }) {
         </span>
       </div>
       <p className="text-center text-[12px] text-ink-muted">Call ads show on phones only. Meta optimises for calls that last long enough to be real enquiries.</p>
+    </div>
+  );
+}
+
+/** Where "View Instagram profile" lands: the business's profile. */
+function ProfileMock({ draft, username, page }: { draft: Draft; username: string; page: string }) {
+  const ad = draft.ad;
+  const thumbs = [ad.format === "carousel" ? ad.carousel.cards[0]?.image : ad.format === "video" ? undefined : ad.media.feed, ...ad.carousel.cards.slice(1, 6).map((c) => c.image)];
+  return (
+    <div className="flex flex-col gap-3">
+      <Frame>
+        <div className="flex items-center gap-4 p-4">
+          <span className="grid size-16 shrink-0 place-items-center rounded-full bg-ink text-[16px] font-extrabold text-chartreuse ring-2 ring-lavender">{initials(page)}</span>
+          <div className="grid flex-1 grid-cols-3 text-center text-[12px]">
+            {["Posts", "Followers", "Following"].map((k) => (
+              <span key={k}>
+                <strong className="block text-[14px]">—</strong>
+                {k}
+              </span>
+            ))}
+          </div>
+        </div>
+        <div className="px-4 pb-3">
+          <p className="text-[13px] font-bold">{page}</p>
+          <p className="text-[12px] text-ink-muted">@{username}</p>
+          <div className="mt-3 grid grid-cols-2 gap-2 text-[12px] font-bold">
+            <span className="rounded-[6px] bg-lavender-deep py-1.5 text-center text-paper">Follow</span>
+            <span className="rounded-[6px] bg-lavender-soft py-1.5 text-center">Message</span>
+          </div>
+        </div>
+        <div className="grid grid-cols-3 gap-0.5">
+          {Array.from({ length: 6 }, (_, i) => (
+            <Media key={i} media={thumbs[i] ?? undefined} label="" className="aspect-square" />
+          ))}
+        </div>
+      </Frame>
+      <p className="text-center text-[12px] text-ink-muted">Tapping the ad opens this profile — Meta optimises for visits that turn into follows.</p>
     </div>
   );
 }

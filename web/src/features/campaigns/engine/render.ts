@@ -81,6 +81,8 @@ export type RenderInput = {
   whatsappNumber?: string | null;
   /** WhatsApp chat ads: what the customer sees when the chat opens. */
   whatsappChat?: { greeting: string; prefill?: string | null; questions?: string[] } | null;
+  /** Instagram profile ads: the client's @username (for the profile link). */
+  instagramUsername?: string | null;
   /** Website conversions (Sales / website leads): the client's Pixel + event. */
   pixel?: { pixelId: string; event: string } | null;
   /** Awareness: max impressions per person per 7 days. */
@@ -121,10 +123,11 @@ const OBJECTIVE_WORD: Record<string, string> = {
  *   messenger    MESSENGER    CONVERSATIONS    promoted {page_id}  CTA MESSAGE_PAGE · app_destination
  *   instagram_dm INSTAGRAM_DIRECT CONVERSATIONS promoted {page_id} CTA INSTAGRAM_MESSAGE · app_destination
  *   call         PHONE_CALL   QUALITY_CALL                         CTA CALL_NOW · tel:
+ *   instagram_profile INSTAGRAM_PROFILE PROFILE_VISIT promoted {page_id} CTA VIEW_INSTAGRAM_PROFILE (Instagram only)
  *   website      WEBSITE      LINK_CLICKS (Traffic) | OFFSITE_CONVERSIONS + {pixel_id, event} (Leads/Sales)
  *   none         (Awareness)  REACH
  */
-function routeFor(objective: string, dest: Destination, pageId: string) {
+function routeFor(objective: string, dest: Destination, pageId: string, igUsername?: string | null) {
   const pageUrl = `https://www.facebook.com/${pageId}`;
   const base = { pageUrl, link: null as string | null, cta: null as CtaType | null, appDestination: null as string | null, pagePromoted: false, pixel: false };
   switch (dest) {
@@ -138,6 +141,15 @@ function routeFor(objective: string, dest: Destination, pageId: string) {
       return { ...base, destinationType: "INSTAGRAM_DIRECT", goal: "CONVERSATIONS", pagePromoted: true, link: "https://www.instagram.com", cta: "INSTAGRAM_MESSAGE" as CtaType, appDestination: "INSTAGRAM_DIRECT" };
     case "call":
       return { ...base, destinationType: "PHONE_CALL", goal: "QUALITY_CALL", cta: "CALL_NOW" as CtaType };
+    case "instagram_profile":
+      return {
+        ...base,
+        destinationType: "INSTAGRAM_PROFILE",
+        goal: "PROFILE_VISIT",
+        pagePromoted: true,
+        cta: "VIEW_INSTAGRAM_PROFILE" as CtaType,
+        link: `https://www.instagram.com/${(igUsername ?? "").replace(/^@/, "")}`,
+      };
     case "none":
       return { ...base, destinationType: "WEBSITE", goal: "REACH" };
     case "website":
@@ -180,7 +192,7 @@ export function renderSpec(input: RenderInput): CampaignSpecInput {
   const dest = input.destination;
   const isLeadForm = dest === "lead_form";
   const objective = input.objective || (isLeadForm ? "OUTCOME_LEADS" : "OUTCOME_TRAFFIC");
-  const route = routeFor(objective, dest, String(client.page_id));
+  const route = routeFor(objective, dest, String(client.page_id), input.instagramUsername);
   const linkTarget = route.link ?? (input.landingPageUrl || client.website_url || (dest === "none" || dest === "call" ? route.pageUrl : "https://example.com"));
   const ctaType = route.cta ?? (input.ctaType || adCopy.call_to_action || (isLeadForm ? "GET_QUOTE" : "LEARN_MORE"));
   const pref = (adCopy.gender || "any").toLowerCase();
@@ -225,7 +237,8 @@ export function renderSpec(input: RenderInput): CampaignSpecInput {
       genders,
       locales,
       flexible_spec: flexibleSpec,
-      publisher_platforms: input.publisherPlatforms?.length ? input.publisherPlatforms : ["facebook", "instagram"],
+      // Instagram-profile ads only run on Instagram.
+      publisher_platforms: dest === "instagram_profile" ? ["instagram"] : input.publisherPlatforms?.length ? input.publisherPlatforms : ["facebook", "instagram"],
       ...(input.deviceOs && input.deviceOs !== "all"
         ? { user_os: [input.deviceOs === "ios" ? "iOS" : "Android"], device_platforms: ["mobile"] }
         : dest === "call"

@@ -141,6 +141,21 @@ export function DestinationDetails({
           {website("Website", "Helps the AI write better copy.")}
         </div>
       );
+    case "instagram_profile":
+      return (
+        <div className="flex flex-col gap-4">
+          {client?.hasInstagram ? (
+            <Callout>
+              Tapping <strong>View Instagram profile</strong> opens {client.instagramUsername ? `@${client.instagramUsername}` : "the Instagram account"}. Meta optimises for profile visits — great
+              for growing followers. Runs on Instagram only.
+            </Callout>
+          ) : (
+            <Callout tone="error">Connect this client&apos;s Instagram account first (client page → assets).</Callout>
+          )}
+          <p className="text-[12px] text-ink-muted">Meta is still rolling this out — if the ad account doesn&apos;t have it yet, Meta says so when you click “Check with Meta” or launch.</p>
+          {website("Website", "Helps the AI write better copy.")}
+        </div>
+      );
     case "none":
       return website("Website", "Optional “Learn more” link. Without one, the ad links to the Facebook Page.");
   }

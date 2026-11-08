@@ -80,7 +80,7 @@ export type GenderPref = keyof typeof GENDER_TO_META;
  * Where people go after tapping. "none" = Awareness (no conversion location).
  * website = Traffic, or Pixel-tracked conversions under Leads/Sales.
  */
-export const DESTINATIONS = ["website", "lead_form", "whatsapp", "call", "messenger", "instagram_dm", "none"] as const;
+export const DESTINATIONS = ["website", "lead_form", "whatsapp", "call", "messenger", "instagram_dm", "instagram_profile", "none"] as const;
 export type Destination = (typeof DESTINATIONS)[number];
 
 /** Pixel events offered for website conversions. */
@@ -94,8 +94,9 @@ export const CTA_FOR_WEBSITE: CtaType[] = [
   "SHOP_NOW", "LEARN_MORE", "SIGN_UP", "DOWNLOAD", "GET_OFFER",
   "GET_QUOTE", "CONTACT_US", "BUY_NOW", "BOOK_TRAVEL", "SUBSCRIBE",
 ];
+// Instant-form ads accept a narrower set (no "Contact us"). BOOK_TRAVEL shows as "Book now".
 export const CTA_FOR_LEAD_FORM: CtaType[] = [
-  "GET_QUOTE", "SIGN_UP", "LEARN_MORE", "CONTACT_US", "APPLY_NOW",
+  "GET_QUOTE", "SIGN_UP", "LEARN_MORE", "APPLY_NOW", "BOOK_TRAVEL",
   "GET_OFFER", "SUBSCRIBE", "DOWNLOAD",
 ];
 
@@ -107,6 +108,7 @@ export const CTA_FOR: Record<Destination, CtaType[]> = {
   call: ["CALL_NOW"],
   messenger: ["MESSAGE_PAGE"],
   instagram_dm: ["INSTAGRAM_MESSAGE"],
+  instagram_profile: ["VIEW_INSTAGRAM_PROFILE"],
   none: ["LEARN_MORE", "SHOP_NOW", "CONTACT_US", "GET_OFFER", "BOOK_TRAVEL"],
 };
 
