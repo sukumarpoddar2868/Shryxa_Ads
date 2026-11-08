@@ -7,7 +7,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "seed:admin": "node --env-file=.env.local scripts/seed-admin.mts"
+    "seed:admin": "node --env-file=.env.local scripts/seed-admin.mts",
+    "test:engine": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --test src/features/campaigns/engine/*.test.ts"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.119.0",

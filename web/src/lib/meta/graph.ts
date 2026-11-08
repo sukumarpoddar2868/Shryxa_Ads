@@ -15,6 +15,8 @@ export class MetaApiError extends Error {
     readonly subcode?: number,
     readonly type?: string,
     readonly status?: number,
+    /** Meta's human-readable explanation (`error_user_msg`), when it sends one. */
+    readonly userMessage?: string,
   ) {
     super(message);
     this.name = "MetaApiError";
@@ -39,10 +41,10 @@ function proof(token: string): string {
 
 async function call<T>(url: URL, init?: RequestInit): Promise<T> {
   const res = await fetch(url, { ...init, cache: "no-store", signal: AbortSignal.timeout(20_000) });
-  const body = (await res.json().catch(() => ({}))) as { error?: { message?: string; code?: number; error_subcode?: number; type?: string } };
+  const body = (await res.json().catch(() => ({}))) as { error?: { message?: string; code?: number; error_subcode?: number; type?: string; error_user_msg?: string } };
   if (!res.ok || body.error) {
     const e = body.error ?? {};
-    throw new MetaApiError(e.message ?? `Meta request failed (${res.status})`, e.code, e.error_subcode, e.type, res.status);
+    throw new MetaApiError(e.message ?? `Meta request failed (${res.status})`, e.code, e.error_subcode, e.type, res.status, e.error_user_msg);
   }
   return body as T;
 }
@@ -66,6 +68,10 @@ export function graphPost<T>(path: string, token: string, params: Params = {}): 
   const body = new URLSearchParams();
   for (const [k, v] of Object.entries(params)) if (v !== undefined) body.set(k, String(v));
   return call<T>(url, { method: "POST", body });
+}
+
+export function graphDelete<T = { success?: boolean }>(path: string, token: string): Promise<T> {
+  return call<T>(buildUrl(path, {}, token), { method: "DELETE" });
 }
 
 /** Follows `paging.next` up to `maxPages` and concatenates `data`. */

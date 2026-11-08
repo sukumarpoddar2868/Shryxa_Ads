@@ -1,0 +1,2755 @@
+{
+  "valid": [
+    {
+      "name": "yaml_example_traffic_campaign",
+      "input": {
+        "ad_account_id": "1234567890",
+        "campaign": {
+          "name": "Q4 Book Launch — Meta Traffic",
+          "objective": "OUTCOME_TRAFFIC",
+          "special_ad_categories": [
+            "NONE"
+          ],
+          "buying_type": "AUCTION",
+          "spend_cap": 100000
+        },
+        "ad_set": {
+          "name": "India 25-44, Mystery Readers",
+          "optimization_goal": "LINK_CLICKS",
+          "billing_event": "IMPRESSIONS",
+          "bid_strategy": "LOWEST_COST_WITHOUT_CAP",
+          "daily_budget": 30000,
+          "destination_type": "WEBSITE",
+          "targeting": {
+            "geo_locations": {
+              "countries": [
+                "IN"
+              ],
+              "location_types": [
+                "home",
+                "recent"
+              ]
+            },
+            "age_min": 25,
+            "age_max": 44,
+            "genders": [],
+            "locales": [],
+            "flexible_spec": [
+              {
+                "interests": [
+                  {
+                    "id": "6003020834693",
+                    "name": "Mystery fiction"
+                  },
+                  {
+                    "id": "6003107902433",
+                    "name": "Crime fiction"
+                  }
+                ]
+              }
+            ],
+            "publisher_platforms": [
+              "facebook",
+              "instagram"
+            ],
+            "facebook_positions": [
+              "feed",
+              "story"
+            ],
+            "instagram_positions": [
+              "stream",
+              "story",
+              "reels"
+            ]
+          }
+        },
+        "ad": {
+          "name": "Midnight Detective — single image",
+          "creative": {
+            "name": "Creative — Midnight Detective v1",
+            "object_story_spec": {
+              "page_id": "100000000000000",
+              "instagram_actor_id": "17841400000000000",
+              "link_data": {
+                "image_hash": "abc123def456ghi789jkl012mno345pq",
+                "message": "Detective Maya Verma is back. The new mystery you can't put down — out now.",
+                "name": "Midnight Detective — Out Now",
+                "description": "Hardcover, paperback, Kindle.",
+                "link": "https://example.com/books/midnight-detective",
+                "call_to_action": {
+                  "type": "SHOP_NOW",
+                  "value_link": "https://example.com/books/midnight-detective"
+                }
+              }
+            },
+            "url_tags": "utm_source=facebook&utm_medium=cpc&utm_campaign=book_launch"
+          }
+        }
+      },
+      "operations": [
+        {
+          "resourceType": "campaign",
+          "refKey": "campaign",
+          "endpoint": "act_1234567890/campaigns",
+          "payload": {
+            "name": "Q4 Book Launch — Meta Traffic",
+            "objective": "OUTCOME_TRAFFIC",
+            "status": "PAUSED",
+            "special_ad_categories": [
+              "NONE"
+            ],
+            "buying_type": "AUCTION",
+            "is_adset_budget_sharing_enabled": false,
+            "spend_cap": 100000
+          }
+        },
+        {
+          "resourceType": "ad_set",
+          "refKey": "ad_set",
+          "endpoint": "act_1234567890/adsets",
+          "payload": {
+            "name": "India 25-44, Mystery Readers",
+            "campaign_id": "${CAMPAIGN_ID}",
+            "status": "PAUSED",
+            "optimization_goal": "LINK_CLICKS",
+            "billing_event": "IMPRESSIONS",
+            "bid_strategy": "LOWEST_COST_WITHOUT_CAP",
+            "destination_type": "WEBSITE",
+            "targeting": {
+              "geo_locations": {
+                "countries": [
+                  "IN"
+                ],
+                "location_types": [
+                  "home",
+                  "recent"
+                ]
+              },
+              "age_min": 25,
+              "age_max": 44,
+              "flexible_spec": [
+                {
+                  "interests": [
+                    {
+                      "id": "6003020834693",
+                      "name": "Mystery fiction"
+                    },
+                    {
+                      "id": "6003107902433",
+                      "name": "Crime fiction"
+                    }
+                  ]
+                }
+              ],
+              "publisher_platforms": [
+                "facebook",
+                "instagram"
+              ],
+              "facebook_positions": [
+                "feed",
+                "story"
+              ],
+              "instagram_positions": [
+                "stream",
+                "story",
+                "reels"
+              ],
+              "targeting_automation": {
+                "advantage_audience": 0
+              }
+            },
+            "daily_budget": 30000
+          }
+        },
+        {
+          "resourceType": "ad",
+          "refKey": "ad",
+          "endpoint": "act_1234567890/ads",
+          "payload": {
+            "name": "Midnight Detective — single image",
+            "adset_id": "${AD_SET_ID}",
+            "status": "PAUSED",
+            "creative": {
+              "name": "Creative — Midnight Detective v1",
+              "object_story_spec": {
+                "page_id": "100000000000000",
+                "instagram_actor_id": "17841400000000000",
+                "link_data": {
+                  "image_hash": "abc123def456ghi789jkl012mno345pq",
+                  "message": "Detective Maya Verma is back. The new mystery you can't put down — out now.",
+                  "name": "Midnight Detective — Out Now",
+                  "description": "Hardcover, paperback, Kindle.",
+                  "link": "https://example.com/books/midnight-detective",
+                  "call_to_action": {
+                    "type": "SHOP_NOW",
+                    "value": {
+                      "link": "https://example.com/books/midnight-detective"
+                    }
+                  }
+                }
+              },
+              "url_tags": "utm_source=facebook&utm_medium=cpc&utm_campaign=book_launch"
+            }
+          }
+        }
+      ],
+      "mock": {
+        "form_id": null,
+        "steps": [
+          {
+            "step": 1,
+            "endpoint": "act_1234567890/campaigns",
+            "payload": {
+              "name": "Q4 Book Launch — Meta Traffic",
+              "objective": "OUTCOME_TRAFFIC",
+              "status": "PAUSED",
+              "special_ad_categories": [
+                "NONE"
+              ],
+              "buying_type": "AUCTION",
+              "is_adset_budget_sharing_enabled": false,
+              "spend_cap": 100000
+            },
+            "id": "1000000001"
+          },
+          {
+            "step": 2,
+            "endpoint": "act_1234567890/adsets",
+            "payload": {
+              "name": "India 25-44, Mystery Readers",
+              "campaign_id": "1000000001",
+              "status": "PAUSED",
+              "optimization_goal": "LINK_CLICKS",
+              "billing_event": "IMPRESSIONS",
+              "bid_strategy": "LOWEST_COST_WITHOUT_CAP",
+              "destination_type": "WEBSITE",
+              "targeting": {
+                "geo_locations": {
+                  "countries": [
+                    "IN"
+                  ],
+                  "location_types": [
+                    "home",
+                    "recent"
+                  ]
+                },
+                "age_min": 25,
+                "age_max": 44,
+                "flexible_spec": [
+                  {
+                    "interests": [
+                      {
+                        "id": "6003020834693",
+                        "name": "Mystery fiction"
+                      },
+                      {
+                        "id": "6003107902433",
+                        "name": "Crime fiction"
+                      }
+                    ]
+                  }
+                ],
+                "publisher_platforms": [
+                  "facebook",
+                  "instagram"
+                ],
+                "facebook_positions": [
+                  "feed",
+                  "story"
+                ],
+                "instagram_positions": [
+                  "stream",
+                  "story",
+                  "reels"
+                ],
+                "targeting_automation": {
+                  "advantage_audience": 0
+                }
+              },
+              "daily_budget": 30000
+            },
+            "id": "1000000002"
+          },
+          {
+            "step": 3,
+            "endpoint": "act_1234567890/ads",
+            "payload": {
+              "name": "Midnight Detective — single image",
+              "adset_id": "1000000002",
+              "status": "PAUSED",
+              "creative": {
+                "name": "Creative — Midnight Detective v1",
+                "object_story_spec": {
+                  "page_id": "100000000000000",
+                  "instagram_actor_id": "17841400000000000",
+                  "link_data": {
+                    "image_hash": "abc123def456ghi789jkl012mno345pq",
+                    "message": "Detective Maya Verma is back. The new mystery you can't put down — out now.",
+                    "name": "Midnight Detective — Out Now",
+                    "description": "Hardcover, paperback, Kindle.",
+                    "link": "https://example.com/books/midnight-detective",
+                    "call_to_action": {
+                      "type": "SHOP_NOW",
+                      "value": {
+                        "link": "https://example.com/books/midnight-detective"
+                      }
+                    }
+                  }
+                },
+                "url_tags": "utm_source=facebook&utm_medium=cpc&utm_campaign=book_launch"
+              }
+            },
+            "id": "1000000003"
+          }
+        ]
+      }
+    },
+    {
+      "name": "yaml_example_traffic_proximity",
+      "input": {
+        "ad_account_id": "1234567890",
+        "campaign": {
+          "name": "Coworking Pilot — Meta Traffic",
+          "objective": "OUTCOME_TRAFFIC",
+          "special_ad_categories": [
+            "NONE"
+          ],
+          "spend_cap": 200000
+        },
+        "ad_set": {
+          "name": "Bangalore Pin-Drops, Founders 25-44",
+          "optimization_goal": "LINK_CLICKS",
+          "daily_budget": 50000,
+          "destination_type": "WEBSITE",
+          "targeting": {
+            "geo_locations": {
+              "custom_locations": [
+                {
+                  "latitude": 12.934285,
+                  "longitude": 77.669365,
+                  "radius": 1.5
+                },
+                {
+                  "latitude": 12.969266,
+                  "longitude": 77.60253,
+                  "radius": 1.5
+                },
+                {
+                  "latitude": 13.069354,
+                  "longitude": 77.565689,
+                  "radius": 1.5
+                }
+              ],
+              "location_types": [
+                "home",
+                "recent"
+              ]
+            },
+            "age_min": 25,
+            "age_max": 44,
+            "genders": [],
+            "flexible_spec": [
+              {
+                "interests": [
+                  {
+                    "id": "6003020834693",
+                    "name": "Coworking"
+                  },
+                  {
+                    "id": "6003107902433",
+                    "name": "Startup company"
+                  }
+                ]
+              }
+            ],
+            "publisher_platforms": [
+              "facebook",
+              "instagram"
+            ]
+          }
+        },
+        "ad": {
+          "name": "Coworking — single image",
+          "creative": {
+            "name": "Coworking creative v1",
+            "object_story_spec": {
+              "page_id": "100000000000000",
+              "instagram_actor_id": "17841400000000000",
+              "link_data": {
+                "image_hash": "placeholderhashtobeuploadedinrealrun",
+                "message": "Premium coworking, three locations across Bangalore. Hot desks, cabins, meeting rooms. Book a tour.",
+                "name": "Premium Coworking, Bangalore",
+                "description": "HSR · Indiranagar · Hebbal",
+                "link": "https://example.com/coworking",
+                "call_to_action": {
+                  "type": "BOOK_TRAVEL",
+                  "value_link": "https://example.com/coworking"
+                }
+              }
+            },
+            "url_tags": "utm_source=facebook&utm_medium=cpc&utm_campaign=coworking_pilot"
+          }
+        }
+      },
+      "operations": [
+        {
+          "resourceType": "campaign",
+          "refKey": "campaign",
+          "endpoint": "act_1234567890/campaigns",
+          "payload": {
+            "name": "Coworking Pilot — Meta Traffic",
+            "objective": "OUTCOME_TRAFFIC",
+            "status": "PAUSED",
+            "special_ad_categories": [
+              "NONE"
+            ],
+            "buying_type": "AUCTION",
+            "is_adset_budget_sharing_enabled": false,
+            "spend_cap": 200000
+          }
+        },
+        {
+          "resourceType": "ad_set",
+          "refKey": "ad_set",
+          "endpoint": "act_1234567890/adsets",
+          "payload": {
+            "name": "Bangalore Pin-Drops, Founders 25-44",
+            "campaign_id": "${CAMPAIGN_ID}",
+            "status": "PAUSED",
+            "optimization_goal": "LINK_CLICKS",
+            "billing_event": "IMPRESSIONS",
+            "bid_strategy": "LOWEST_COST_WITHOUT_CAP",
+            "destination_type": "WEBSITE",
+            "targeting": {
+              "geo_locations": {
+                "custom_locations": [
+                  {
+                    "latitude": 12.934285,
+                    "longitude": 77.669365,
+                    "radius": 1.5,
+                    "distance_unit": "kilometer"
+                  },
+                  {
+                    "latitude": 12.969266,
+                    "longitude": 77.60253,
+                    "radius": 1.5,
+                    "distance_unit": "kilometer"
+                  },
+                  {
+                    "latitude": 13.069354,
+                    "longitude": 77.565689,
+                    "radius": 1.5,
+                    "distance_unit": "kilometer"
+                  }
+                ],
+                "location_types": [
+                  "home",
+                  "recent"
+                ]
+              },
+              "age_min": 25,
+              "age_max": 44,
+              "flexible_spec": [
+                {
+                  "interests": [
+                    {
+                      "id": "6003020834693",
+                      "name": "Coworking"
+                    },
+                    {
+                      "id": "6003107902433",
+                      "name": "Startup company"
+                    }
+                  ]
+                }
+              ],
+              "publisher_platforms": [
+                "facebook",
+                "instagram"
+              ],
+              "targeting_automation": {
+                "advantage_audience": 0
+              }
+            },
+            "daily_budget": 50000
+          }
+        },
+        {
+          "resourceType": "ad",
+          "refKey": "ad",
+          "endpoint": "act_1234567890/ads",
+          "payload": {
+            "name": "Coworking — single image",
+            "adset_id": "${AD_SET_ID}",
+            "status": "PAUSED",
+            "creative": {
+              "name": "Coworking creative v1",
+              "object_story_spec": {
+                "page_id": "100000000000000",
+                "instagram_actor_id": "17841400000000000",
+                "link_data": {
+                  "image_hash": "placeholderhashtobeuploadedinrealrun",
+                  "message": "Premium coworking, three locations across Bangalore. Hot desks, cabins, meeting rooms. Book a tour.",
+                  "name": "Premium Coworking, Bangalore",
+                  "description": "HSR · Indiranagar · Hebbal",
+                  "link": "https://example.com/coworking",
+                  "call_to_action": {
+                    "type": "BOOK_TRAVEL",
+                    "value": {
+                      "link": "https://example.com/coworking"
+                    }
+                  }
+                }
+              },
+              "url_tags": "utm_source=facebook&utm_medium=cpc&utm_campaign=coworking_pilot"
+            }
+          }
+        }
+      ],
+      "mock": {
+        "form_id": null,
+        "steps": [
+          {
+            "step": 1,
+            "endpoint": "act_1234567890/campaigns",
+            "payload": {
+              "name": "Coworking Pilot — Meta Traffic",
+              "objective": "OUTCOME_TRAFFIC",
+              "status": "PAUSED",
+              "special_ad_categories": [
+                "NONE"
+              ],
+              "buying_type": "AUCTION",
+              "is_adset_budget_sharing_enabled": false,
+              "spend_cap": 200000
+            },
+            "id": "1000000001"
+          },
+          {
+            "step": 2,
+            "endpoint": "act_1234567890/adsets",
+            "payload": {
+              "name": "Bangalore Pin-Drops, Founders 25-44",
+              "campaign_id": "1000000001",
+              "status": "PAUSED",
+              "optimization_goal": "LINK_CLICKS",
+              "billing_event": "IMPRESSIONS",
+              "bid_strategy": "LOWEST_COST_WITHOUT_CAP",
+              "destination_type": "WEBSITE",
+              "targeting": {
+                "geo_locations": {
+                  "custom_locations": [
+                    {
+                      "latitude": 12.934285,
+                      "longitude": 77.669365,
+                      "radius": 1.5,
+                      "distance_unit": "kilometer"
+                    },
+                    {
+                      "latitude": 12.969266,
+                      "longitude": 77.60253,
+                      "radius": 1.5,
+                      "distance_unit": "kilometer"
+                    },
+                    {
+                      "latitude": 13.069354,
+                      "longitude": 77.565689,
+                      "radius": 1.5,
+                      "distance_unit": "kilometer"
+                    }
+                  ],
+                  "location_types": [
+                    "home",
+                    "recent"
+                  ]
+                },
+                "age_min": 25,
+                "age_max": 44,
+                "flexible_spec": [
+                  {
+                    "interests": [
+                      {
+                        "id": "6003020834693",
+                        "name": "Coworking"
+                      },
+                      {
+                        "id": "6003107902433",
+                        "name": "Startup company"
+                      }
+                    ]
+                  }
+                ],
+                "publisher_platforms": [
+                  "facebook",
+                  "instagram"
+                ],
+                "targeting_automation": {
+                  "advantage_audience": 0
+                }
+              },
+              "daily_budget": 50000
+            },
+            "id": "1000000002"
+          },
+          {
+            "step": 3,
+            "endpoint": "act_1234567890/ads",
+            "payload": {
+              "name": "Coworking — single image",
+              "adset_id": "1000000002",
+              "status": "PAUSED",
+              "creative": {
+                "name": "Coworking creative v1",
+                "object_story_spec": {
+                  "page_id": "100000000000000",
+                  "instagram_actor_id": "17841400000000000",
+                  "link_data": {
+                    "image_hash": "placeholderhashtobeuploadedinrealrun",
+                    "message": "Premium coworking, three locations across Bangalore. Hot desks, cabins, meeting rooms. Book a tour.",
+                    "name": "Premium Coworking, Bangalore",
+                    "description": "HSR · Indiranagar · Hebbal",
+                    "link": "https://example.com/coworking",
+                    "call_to_action": {
+                      "type": "BOOK_TRAVEL",
+                      "value": {
+                        "link": "https://example.com/coworking"
+                      }
+                    }
+                  }
+                },
+                "url_tags": "utm_source=facebook&utm_medium=cpc&utm_campaign=coworking_pilot"
+              }
+            },
+            "id": "1000000003"
+          }
+        ]
+      }
+    },
+    {
+      "name": "yaml_pilot_test",
+      "input": {
+        "ad_account_id": "998848709363610",
+        "campaign": {
+          "name": "Pilot Test — Meta Traffic",
+          "objective": "OUTCOME_TRAFFIC",
+          "special_ad_categories": [
+            "NONE"
+          ],
+          "buying_type": "AUCTION",
+          "spend_cap": 500000
+        },
+        "ad_set": {
+          "name": "Pilot Ad Set — India 25-44",
+          "optimization_goal": "LINK_CLICKS",
+          "billing_event": "IMPRESSIONS",
+          "bid_strategy": "LOWEST_COST_WITHOUT_CAP",
+          "daily_budget": 10000,
+          "destination_type": "WEBSITE",
+          "targeting": {
+            "geo_locations": {
+              "countries": [
+                "IN"
+              ],
+              "location_types": [
+                "home",
+                "recent"
+              ]
+            },
+            "age_min": 25,
+            "age_max": 44,
+            "genders": [],
+            "locales": [],
+            "flexible_spec": [],
+            "publisher_platforms": [
+              "facebook",
+              "instagram"
+            ]
+          }
+        },
+        "ad": {
+          "name": "Pilot Test Ad",
+          "creative": {
+            "name": "Pilot Test Creative",
+            "object_story_spec": {
+              "page_id": "1033691806503292",
+              "link_data": {
+                "image_hash": "d362e57df24b77e1d05b5dd8f07198c2",
+                "message": "Pilot test — API integration validation. Not a real campaign.",
+                "name": "Pilot Test",
+                "link": "https://example.com/pilot-test",
+                "call_to_action": {
+                  "type": "LEARN_MORE",
+                  "value_link": "https://example.com/pilot-test"
+                }
+              }
+            }
+          }
+        }
+      },
+      "operations": [
+        {
+          "resourceType": "campaign",
+          "refKey": "campaign",
+          "endpoint": "act_998848709363610/campaigns",
+          "payload": {
+            "name": "Pilot Test — Meta Traffic",
+            "objective": "OUTCOME_TRAFFIC",
+            "status": "PAUSED",
+            "special_ad_categories": [
+              "NONE"
+            ],
+            "buying_type": "AUCTION",
+            "is_adset_budget_sharing_enabled": false,
+            "spend_cap": 500000
+          }
+        },
+        {
+          "resourceType": "ad_set",
+          "refKey": "ad_set",
+          "endpoint": "act_998848709363610/adsets",
+          "payload": {
+            "name": "Pilot Ad Set — India 25-44",
+            "campaign_id": "${CAMPAIGN_ID}",
+            "status": "PAUSED",
+            "optimization_goal": "LINK_CLICKS",
+            "billing_event": "IMPRESSIONS",
+            "bid_strategy": "LOWEST_COST_WITHOUT_CAP",
+            "destination_type": "WEBSITE",
+            "targeting": {
+              "geo_locations": {
+                "countries": [
+                  "IN"
+                ],
+                "location_types": [
+                  "home",
+                  "recent"
+                ]
+              },
+              "age_min": 25,
+              "age_max": 44,
+              "publisher_platforms": [
+                "facebook",
+                "instagram"
+              ],
+              "targeting_automation": {
+                "advantage_audience": 0
+              }
+            },
+            "daily_budget": 10000
+          }
+        },
+        {
+          "resourceType": "ad",
+          "refKey": "ad",
+          "endpoint": "act_998848709363610/ads",
+          "payload": {
+            "name": "Pilot Test Ad",
+            "adset_id": "${AD_SET_ID}",
+            "status": "PAUSED",
+            "creative": {
+              "name": "Pilot Test Creative",
+              "object_story_spec": {
+                "page_id": "1033691806503292",
+                "link_data": {
+                  "image_hash": "d362e57df24b77e1d05b5dd8f07198c2",
+                  "message": "Pilot test — API integration validation. Not a real campaign.",
+                  "name": "Pilot Test",
+                  "link": "https://example.com/pilot-test",
+                  "call_to_action": {
+                    "type": "LEARN_MORE",
+                    "value": {
+                      "link": "https://example.com/pilot-test"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      ],
+      "mock": {
+        "form_id": null,
+        "steps": [
+          {
+            "step": 1,
+            "endpoint": "act_998848709363610/campaigns",
+            "payload": {
+              "name": "Pilot Test — Meta Traffic",
+              "objective": "OUTCOME_TRAFFIC",
+              "status": "PAUSED",
+              "special_ad_categories": [
+                "NONE"
+              ],
+              "buying_type": "AUCTION",
+              "is_adset_budget_sharing_enabled": false,
+              "spend_cap": 500000
+            },
+            "id": "1000000001"
+          },
+          {
+            "step": 2,
+            "endpoint": "act_998848709363610/adsets",
+            "payload": {
+              "name": "Pilot Ad Set — India 25-44",
+              "campaign_id": "1000000001",
+              "status": "PAUSED",
+              "optimization_goal": "LINK_CLICKS",
+              "billing_event": "IMPRESSIONS",
+              "bid_strategy": "LOWEST_COST_WITHOUT_CAP",
+              "destination_type": "WEBSITE",
+              "targeting": {
+                "geo_locations": {
+                  "countries": [
+                    "IN"
+                  ],
+                  "location_types": [
+                    "home",
+                    "recent"
+                  ]
+                },
+                "age_min": 25,
+                "age_max": 44,
+                "publisher_platforms": [
+                  "facebook",
+                  "instagram"
+                ],
+                "targeting_automation": {
+                  "advantage_audience": 0
+                }
+              },
+              "daily_budget": 10000
+            },
+            "id": "1000000002"
+          },
+          {
+            "step": 3,
+            "endpoint": "act_998848709363610/ads",
+            "payload": {
+              "name": "Pilot Test Ad",
+              "adset_id": "1000000002",
+              "status": "PAUSED",
+              "creative": {
+                "name": "Pilot Test Creative",
+                "object_story_spec": {
+                  "page_id": "1033691806503292",
+                  "link_data": {
+                    "image_hash": "d362e57df24b77e1d05b5dd8f07198c2",
+                    "message": "Pilot test — API integration validation. Not a real campaign.",
+                    "name": "Pilot Test",
+                    "link": "https://example.com/pilot-test",
+                    "call_to_action": {
+                      "type": "LEARN_MORE",
+                      "value": {
+                        "link": "https://example.com/pilot-test"
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "id": "1000000003"
+          }
+        ]
+      }
+    },
+    {
+      "name": "datetimes",
+      "input": {
+        "ad_account_id": "1",
+        "campaign": {
+          "name": "c"
+        },
+        "ad_set": {
+          "name": "s",
+          "daily_budget": 100,
+          "targeting": {
+            "geo_locations": {
+              "countries": [
+                "IN"
+              ]
+            }
+          },
+          "start_time": "2026-05-15T09:00Z",
+          "end_time": "2026-06-30T23:59:00+0530"
+        },
+        "ad": {
+          "name": "a",
+          "creative": {
+            "object_story_spec": {
+              "page_id": "p",
+              "link_data": {
+                "image_hash": "h",
+                "message": "m",
+                "name": "n",
+                "link": "https://x.y",
+                "call_to_action": {
+                  "type": "LEARN_MORE"
+                }
+              }
+            }
+          }
+        }
+      },
+      "operations": [
+        {
+          "resourceType": "campaign",
+          "refKey": "campaign",
+          "endpoint": "act_1/campaigns",
+          "payload": {
+            "name": "c",
+            "objective": "OUTCOME_TRAFFIC",
+            "status": "PAUSED",
+            "special_ad_categories": [
+              "NONE"
+            ],
+            "buying_type": "AUCTION",
+            "is_adset_budget_sharing_enabled": false
+          }
+        },
+        {
+          "resourceType": "ad_set",
+          "refKey": "ad_set",
+          "endpoint": "act_1/adsets",
+          "payload": {
+            "name": "s",
+            "campaign_id": "${CAMPAIGN_ID}",
+            "status": "PAUSED",
+            "optimization_goal": "LINK_CLICKS",
+            "billing_event": "IMPRESSIONS",
+            "bid_strategy": "LOWEST_COST_WITHOUT_CAP",
+            "destination_type": "WEBSITE",
+            "targeting": {
+              "geo_locations": {
+                "countries": [
+                  "IN"
+                ],
+                "location_types": [
+                  "home",
+                  "recent"
+                ]
+              },
+              "age_min": 18,
+              "age_max": 65,
+              "publisher_platforms": [
+                "facebook",
+                "instagram"
+              ],
+              "targeting_automation": {
+                "advantage_audience": 0
+              }
+            },
+            "daily_budget": 100,
+            "start_time": "2026-05-15T09:00:00+00:00",
+            "end_time": "2026-06-30T23:59:00+05:30"
+          }
+        },
+        {
+          "resourceType": "ad",
+          "refKey": "ad",
+          "endpoint": "act_1/ads",
+          "payload": {
+            "name": "a",
+            "adset_id": "${AD_SET_ID}",
+            "status": "PAUSED",
+            "creative": {
+              "object_story_spec": {
+                "page_id": "p",
+                "link_data": {
+                  "image_hash": "h",
+                  "message": "m",
+                  "name": "n",
+                  "link": "https://x.y",
+                  "call_to_action": {
+                    "type": "LEARN_MORE",
+                    "value": {
+                      "link": "https://x.y"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      ],
+      "mock": {
+        "form_id": null,
+        "steps": [
+          {
+            "step": 1,
+            "endpoint": "act_1/campaigns",
+            "payload": {
+              "name": "c",
+              "objective": "OUTCOME_TRAFFIC",
+              "status": "PAUSED",
+              "special_ad_categories": [
+                "NONE"
+              ],
+              "buying_type": "AUCTION",
+              "is_adset_budget_sharing_enabled": false
+            },
+            "id": "1000000001"
+          },
+          {
+            "step": 2,
+            "endpoint": "act_1/adsets",
+            "payload": {
+              "name": "s",
+              "campaign_id": "1000000001",
+              "status": "PAUSED",
+              "optimization_goal": "LINK_CLICKS",
+              "billing_event": "IMPRESSIONS",
+              "bid_strategy": "LOWEST_COST_WITHOUT_CAP",
+              "destination_type": "WEBSITE",
+              "targeting": {
+                "geo_locations": {
+                  "countries": [
+                    "IN"
+                  ],
+                  "location_types": [
+                    "home",
+                    "recent"
+                  ]
+                },
+                "age_min": 18,
+                "age_max": 65,
+                "publisher_platforms": [
+                  "facebook",
+                  "instagram"
+                ],
+                "targeting_automation": {
+                  "advantage_audience": 0
+                }
+              },
+              "daily_budget": 100,
+              "start_time": "2026-05-15T09:00:00+00:00",
+              "end_time": "2026-06-30T23:59:00+05:30"
+            },
+            "id": "1000000002"
+          },
+          {
+            "step": 3,
+            "endpoint": "act_1/ads",
+            "payload": {
+              "name": "a",
+              "adset_id": "1000000002",
+              "status": "PAUSED",
+              "creative": {
+                "object_story_spec": {
+                  "page_id": "p",
+                  "link_data": {
+                    "image_hash": "h",
+                    "message": "m",
+                    "name": "n",
+                    "link": "https://x.y",
+                    "call_to_action": {
+                      "type": "LEARN_MORE",
+                      "value": {
+                        "link": "https://x.y"
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "id": "1000000003"
+          }
+        ]
+      }
+    },
+    {
+      "name": "render_website_inr_epicenters",
+      "input": {
+        "ad_account_id": "998848709363610",
+        "campaign": {
+          "name": "Kapoor & Associates — Chartered Accountants — Traffic STAMP",
+          "objective": "OUTCOME_TRAFFIC",
+          "status": "PAUSED",
+          "special_ad_categories": [
+            "NONE"
+          ],
+          "buying_type": "AUCTION",
+          "spend_cap": 1500000
+        },
+        "ad_set": {
+          "name": "Kapoor & Associates — Chartered Accountants — Default — Ad set STAMP",
+          "optimization_goal": "LINK_CLICKS",
+          "billing_event": "IMPRESSIONS",
+          "bid_strategy": "LOWEST_COST_WITHOUT_CAP",
+          "daily_budget": 50000,
+          "destination_type": "WEBSITE",
+          "targeting": {
+            "geo_locations": {
+              "location_types": [
+                "home",
+                "recent"
+              ],
+              "custom_locations": [
+                {
+                  "latitude": 12.934285,
+                  "longitude": 77.669365,
+                  "radius": 3.0,
+                  "distance_unit": "kilometer"
+                },
+                {
+                  "latitude": 12.969266,
+                  "longitude": 77.60253,
+                  "radius": 1.5,
+                  "distance_unit": "kilometer"
+                }
+              ]
+            },
+            "age_min": 24,
+            "age_max": 55,
+            "genders": [],
+            "locales": [
+              46
+            ],
+            "flexible_spec": [
+              {
+                "interests": [
+                  {
+                    "id": "6003020834693",
+                    "name": "Income tax"
+                  },
+                  {
+                    "id": "6003107902433",
+                    "name": "Personal finance"
+                  }
+                ]
+              }
+            ],
+            "publisher_platforms": [
+              "facebook",
+              "instagram"
+            ],
+            "targeting_automation": {
+              "advantage_audience": 0
+            }
+          }
+        },
+        "ad": {
+          "name": "Kapoor & Associates — Chartered Accountants — single image STAMP",
+          "creative": {
+            "name": "Kapoor & Associates — Chartered Accountants creative STAMP",
+            "object_story_spec": {
+              "page_id": "1033691806503292",
+              "instagram_actor_id": "17841400000000000",
+              "link_data": {
+                "image_hash": "d362e57df24b77e1d05b5dd8f07198c2",
+                "message": "File your ITR before 31 July — avoid the ₹5,000 late fee. Expert CA review.",
+                "name": "ITR filing by licensed CAs — from ₹999,…",
+                "link": "https://kapoorca.in/itr",
+                "call_to_action": {
+                  "type": "GET_QUOTE",
+                  "value_link": "https://kapoorca.in/itr"
+                },
+                "description": "Salaried & business filings. Tax planning, 80C/80D, HRA, home loan deductions handled for you."
+              }
+            }
+          }
+        }
+      },
+      "operations": [
+        {
+          "resourceType": "campaign",
+          "refKey": "campaign",
+          "endpoint": "act_998848709363610/campaigns",
+          "payload": {
+            "name": "Kapoor & Associates — Chartered Accountants — Traffic STAMP",
+            "objective": "OUTCOME_TRAFFIC",
+            "status": "PAUSED",
+            "special_ad_categories": [
+              "NONE"
+            ],
+            "buying_type": "AUCTION",
+            "is_adset_budget_sharing_enabled": false,
+            "spend_cap": 1500000
+          }
+        },
+        {
+          "resourceType": "ad_set",
+          "refKey": "ad_set",
+          "endpoint": "act_998848709363610/adsets",
+          "payload": {
+            "name": "Kapoor & Associates — Chartered Accountants — Default — Ad set STAMP",
+            "campaign_id": "${CAMPAIGN_ID}",
+            "status": "PAUSED",
+            "optimization_goal": "LINK_CLICKS",
+            "billing_event": "IMPRESSIONS",
+            "bid_strategy": "LOWEST_COST_WITHOUT_CAP",
+            "destination_type": "WEBSITE",
+            "targeting": {
+              "geo_locations": {
+                "custom_locations": [
+                  {
+                    "latitude": 12.934285,
+                    "longitude": 77.669365,
+                    "radius": 3.0,
+                    "distance_unit": "kilometer"
+                  },
+                  {
+                    "latitude": 12.969266,
+                    "longitude": 77.60253,
+                    "radius": 1.5,
+                    "distance_unit": "kilometer"
+                  }
+                ],
+                "location_types": [
+                  "home",
+                  "recent"
+                ]
+              },
+              "age_min": 24,
+              "age_max": 55,
+              "locales": [
+                46
+              ],
+              "flexible_spec": [
+                {
+                  "interests": [
+                    {
+                      "id": "6003020834693",
+                      "name": "Income tax"
+                    },
+                    {
+                      "id": "6003107902433",
+                      "name": "Personal finance"
+                    }
+                  ]
+                }
+              ],
+              "publisher_platforms": [
+                "facebook",
+                "instagram"
+              ],
+              "targeting_automation": {
+                "advantage_audience": 0
+              }
+            },
+            "daily_budget": 50000
+          }
+        },
+        {
+          "resourceType": "ad",
+          "refKey": "ad",
+          "endpoint": "act_998848709363610/ads",
+          "payload": {
+            "name": "Kapoor & Associates — Chartered Accountants — single image STAMP",
+            "adset_id": "${AD_SET_ID}",
+            "status": "PAUSED",
+            "creative": {
+              "name": "Kapoor & Associates — Chartered Accountants creative STAMP",
+              "object_story_spec": {
+                "page_id": "1033691806503292",
+                "instagram_actor_id": "17841400000000000",
+                "link_data": {
+                  "image_hash": "d362e57df24b77e1d05b5dd8f07198c2",
+                  "message": "File your ITR before 31 July — avoid the ₹5,000 late fee. Expert CA review.",
+                  "name": "ITR filing by licensed CAs — from ₹999,…",
+                  "description": "Salaried & business filings. Tax planning, 80C/80D, HRA, home loan deductions handled for you.",
+                  "link": "https://kapoorca.in/itr",
+                  "call_to_action": {
+                    "type": "GET_QUOTE",
+                    "value": {
+                      "link": "https://kapoorca.in/itr"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      ],
+      "mock": {
+        "form_id": null,
+        "steps": [
+          {
+            "step": 1,
+            "endpoint": "act_998848709363610/campaigns",
+            "payload": {
+              "name": "Kapoor & Associates — Chartered Accountants — Traffic STAMP",
+              "objective": "OUTCOME_TRAFFIC",
+              "status": "PAUSED",
+              "special_ad_categories": [
+                "NONE"
+              ],
+              "buying_type": "AUCTION",
+              "is_adset_budget_sharing_enabled": false,
+              "spend_cap": 1500000
+            },
+            "id": "1000000001"
+          },
+          {
+            "step": 2,
+            "endpoint": "act_998848709363610/adsets",
+            "payload": {
+              "name": "Kapoor & Associates — Chartered Accountants — Default — Ad set STAMP",
+              "campaign_id": "1000000001",
+              "status": "PAUSED",
+              "optimization_goal": "LINK_CLICKS",
+              "billing_event": "IMPRESSIONS",
+              "bid_strategy": "LOWEST_COST_WITHOUT_CAP",
+              "destination_type": "WEBSITE",
+              "targeting": {
+                "geo_locations": {
+                  "custom_locations": [
+                    {
+                      "latitude": 12.934285,
+                      "longitude": 77.669365,
+                      "radius": 3.0,
+                      "distance_unit": "kilometer"
+                    },
+                    {
+                      "latitude": 12.969266,
+                      "longitude": 77.60253,
+                      "radius": 1.5,
+                      "distance_unit": "kilometer"
+                    }
+                  ],
+                  "location_types": [
+                    "home",
+                    "recent"
+                  ]
+                },
+                "age_min": 24,
+                "age_max": 55,
+                "locales": [
+                  46
+                ],
+                "flexible_spec": [
+                  {
+                    "interests": [
+                      {
+                        "id": "6003020834693",
+                        "name": "Income tax"
+                      },
+                      {
+                        "id": "6003107902433",
+                        "name": "Personal finance"
+                      }
+                    ]
+                  }
+                ],
+                "publisher_platforms": [
+                  "facebook",
+                  "instagram"
+                ],
+                "targeting_automation": {
+                  "advantage_audience": 0
+                }
+              },
+              "daily_budget": 50000
+            },
+            "id": "1000000002"
+          },
+          {
+            "step": 3,
+            "endpoint": "act_998848709363610/ads",
+            "payload": {
+              "name": "Kapoor & Associates — Chartered Accountants — single image STAMP",
+              "adset_id": "1000000002",
+              "status": "PAUSED",
+              "creative": {
+                "name": "Kapoor & Associates — Chartered Accountants creative STAMP",
+                "object_story_spec": {
+                  "page_id": "1033691806503292",
+                  "instagram_actor_id": "17841400000000000",
+                  "link_data": {
+                    "image_hash": "d362e57df24b77e1d05b5dd8f07198c2",
+                    "message": "File your ITR before 31 July — avoid the ₹5,000 late fee. Expert CA review.",
+                    "name": "ITR filing by licensed CAs — from ₹999,…",
+                    "description": "Salaried & business filings. Tax planning, 80C/80D, HRA, home loan deductions handled for you.",
+                    "link": "https://kapoorca.in/itr",
+                    "call_to_action": {
+                      "type": "GET_QUOTE",
+                      "value": {
+                        "link": "https://kapoorca.in/itr"
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "id": "1000000003"
+          }
+        ]
+      },
+      "render_kwargs": {
+        "client": {
+          "business_name": "Kapoor & Associates — Chartered Accountants",
+          "ad_account_id": "998848709363610",
+          "page_id": "1033691806503292",
+          "instagram_actor_id": "17841400000000000"
+        },
+        "currency": "INR",
+        "ad_copy": {
+          "primary_text": "File your ITR before 31 July — avoid the ₹5,000 late fee. Expert CA review.",
+          "headline": "ITR filing by licensed CAs — from ₹999, personalised review",
+          "description": "Salaried & business filings. Tax planning, 80C/80D, HRA, home loan deductions handled for you.",
+          "call_to_action": "GET_QUOTE",
+          "age_min": 24,
+          "age_max": 55,
+          "gender": "any",
+          "interest_targeting": [
+            {
+              "id": "6003020834693",
+              "name": "Income tax"
+            },
+            "raw name dropped",
+            {
+              "id": "0",
+              "name": "zero id dropped"
+            },
+            {
+              "id": "6003107902433",
+              "name": "Personal finance"
+            }
+          ]
+        },
+        "daily_budget": 500.0,
+        "epicenters": [
+          {
+            "lat": 12.934285,
+            "lng": 77.669365,
+            "radius_km": 3
+          },
+          {
+            "lat": 12.969266,
+            "lng": 77.60253,
+            "radius_km": 1.5
+          }
+        ],
+        "destination": "Website",
+        "landing_page_url": "https://kapoorca.in/itr",
+        "image_hash": "d362e57df24b77e1d05b5dd8f07198c2",
+        "language": "Hindi"
+      }
+    },
+    {
+      "name": "render_leadform_inr_variants",
+      "input": {
+        "ad_account_id": "998848709363610",
+        "campaign": {
+          "name": "Kapoor & Associates — Chartered Accountants — Leads STAMP",
+          "objective": "OUTCOME_LEADS",
+          "status": "ACTIVE",
+          "special_ad_categories": [
+            "NONE"
+          ],
+          "buying_type": "AUCTION",
+          "spend_cap": 1800000
+        },
+        "ad_set": {
+          "name": "Kapoor & Associates — Chartered Accountants — Default — Ad set STAMP",
+          "optimization_goal": "LEAD_GENERATION",
+          "billing_event": "IMPRESSIONS",
+          "bid_strategy": "LOWEST_COST_WITHOUT_CAP",
+          "daily_budget": 60000,
+          "destination_type": "ON_AD",
+          "targeting": {
+            "geo_locations": {
+              "location_types": [
+                "home",
+                "recent"
+              ],
+              "countries": [
+                "IN"
+              ]
+            },
+            "age_min": 24,
+            "age_max": 55,
+            "genders": [
+              2
+            ],
+            "locales": [
+              6
+            ],
+            "flexible_spec": [
+              {
+                "interests": [
+                  {
+                    "id": "6003020834693",
+                    "name": "Income tax"
+                  },
+                  {
+                    "id": "6003107902433",
+                    "name": "Personal finance"
+                  }
+                ]
+              }
+            ],
+            "publisher_platforms": [
+              "facebook",
+              "instagram"
+            ],
+            "targeting_automation": {
+              "advantage_audience": 0
+            }
+          },
+          "promoted_object": {
+            "page_id": "1033691806503292"
+          },
+          "start_time": "2026-12-01T00:00:00+0000",
+          "end_time": "2026-12-31T23:59:00+0000"
+        },
+        "ad": {
+          "name": "Kapoor & Associates — Chartered Accountants — single image STAMP",
+          "creative": {
+            "name": "Kapoor & Associates — Chartered Accountants creative STAMP",
+            "object_story_spec": {
+              "page_id": "1033691806503292",
+              "instagram_actor_id": "17841400000000000",
+              "link_data": {
+                "image_hash": "feedhash",
+                "message": "File your ITR before 31 July — avoid the ₹5,000 late fee. Expert CA review.",
+                "name": "ITR filing by licensed CAs — from ₹999,…",
+                "link": "https://example.com",
+                "call_to_action": {
+                  "type": "GET_QUOTE",
+                  "value_lead_gen_form_id": "REPLACE_AFTER_LEAD_FORM_CREATED"
+                },
+                "description": "Salaried & business filings. Tax planning, 80C/80D, HRA, home loan deductions handled for you.",
+                "image_hash_story": "storyhash",
+                "image_hash_portrait": "portraithash"
+              }
+            }
+          }
+        },
+        "lead_form": {
+          "name": "ITR enquiry STAMP",
+          "privacy_url": "https://kapoorca.in/privacy",
+          "custom_questions": [
+            "Salaried or business?",
+            "  "
+          ],
+          "prefilled_questions": [
+            "FULL_NAME",
+            "PHONE_NUMBER",
+            "CITY"
+          ]
+        }
+      },
+      "operations": [
+        {
+          "resourceType": "campaign",
+          "refKey": "campaign",
+          "endpoint": "act_998848709363610/campaigns",
+          "payload": {
+            "name": "Kapoor & Associates — Chartered Accountants — Leads STAMP",
+            "objective": "OUTCOME_LEADS",
+            "status": "ACTIVE",
+            "special_ad_categories": [
+              "NONE"
+            ],
+            "buying_type": "AUCTION",
+            "is_adset_budget_sharing_enabled": false,
+            "spend_cap": 1800000
+          }
+        },
+        {
+          "resourceType": "ad_set",
+          "refKey": "ad_set",
+          "endpoint": "act_998848709363610/adsets",
+          "payload": {
+            "name": "Kapoor & Associates — Chartered Accountants — Default — Ad set STAMP",
+            "campaign_id": "${CAMPAIGN_ID}",
+            "status": "ACTIVE",
+            "optimization_goal": "LEAD_GENERATION",
+            "billing_event": "IMPRESSIONS",
+            "bid_strategy": "LOWEST_COST_WITHOUT_CAP",
+            "destination_type": "ON_AD",
+            "targeting": {
+              "geo_locations": {
+                "countries": [
+                  "IN"
+                ],
+                "location_types": [
+                  "home",
+                  "recent"
+                ]
+              },
+              "age_min": 24,
+              "age_max": 55,
+              "genders": [
+                2
+              ],
+              "locales": [
+                6
+              ],
+              "flexible_spec": [
+                {
+                  "interests": [
+                    {
+                      "id": "6003020834693",
+                      "name": "Income tax"
+                    },
+                    {
+                      "id": "6003107902433",
+                      "name": "Personal finance"
+                    }
+                  ]
+                }
+              ],
+              "publisher_platforms": [
+                "facebook",
+                "instagram"
+              ],
+              "targeting_automation": {
+                "advantage_audience": 0
+              }
+            },
+            "daily_budget": 60000,
+            "start_time": "2026-12-01T00:00:00+00:00",
+            "end_time": "2026-12-31T23:59:00+00:00",
+            "promoted_object": {
+              "page_id": "1033691806503292"
+            }
+          }
+        },
+        {
+          "resourceType": "ad",
+          "refKey": "ad",
+          "endpoint": "act_998848709363610/ads",
+          "payload": {
+            "name": "Kapoor & Associates — Chartered Accountants — single image STAMP",
+            "adset_id": "${AD_SET_ID}",
+            "status": "ACTIVE",
+            "creative": {
+              "name": "Kapoor & Associates — Chartered Accountants creative STAMP",
+              "object_story_spec": {
+                "page_id": "1033691806503292",
+                "instagram_actor_id": "17841400000000000"
+              },
+              "asset_feed_spec": {
+                "images": [
+                  {
+                    "hash": "feedhash",
+                    "name": "feed"
+                  },
+                  {
+                    "hash": "storyhash",
+                    "name": "story"
+                  },
+                  {
+                    "hash": "portraithash",
+                    "name": "portrait"
+                  }
+                ],
+                "bodies": [
+                  {
+                    "text": "File your ITR before 31 July — avoid the ₹5,000 late fee. Expert CA review."
+                  }
+                ],
+                "titles": [
+                  {
+                    "text": "ITR filing by licensed CAs — from ₹999,…"
+                  }
+                ],
+                "link_urls": [
+                  {
+                    "website_url": "https://example.com"
+                  }
+                ],
+                "ad_formats": [
+                  "SINGLE_IMAGE"
+                ],
+                "call_to_action_types": [
+                  "GET_QUOTE"
+                ],
+                "asset_customization_rules": [
+                  {
+                    "customization_spec": {
+                      "publisher_platforms": [
+                        "facebook",
+                        "instagram"
+                      ],
+                      "facebook_positions": [
+                        "story"
+                      ],
+                      "instagram_positions": [
+                        "story",
+                        "reels"
+                      ]
+                    },
+                    "image_label": {
+                      "name": "story"
+                    }
+                  },
+                  {
+                    "customization_spec": {
+                      "publisher_platforms": [
+                        "instagram"
+                      ],
+                      "instagram_positions": [
+                        "stream"
+                      ]
+                    },
+                    "image_label": {
+                      "name": "portrait"
+                    }
+                  },
+                  {
+                    "customization_spec": {
+                      "publisher_platforms": [
+                        "facebook",
+                        "instagram"
+                      ],
+                      "facebook_positions": [
+                        "feed"
+                      ],
+                      "instagram_positions": [
+                        "stream"
+                      ]
+                    },
+                    "image_label": {
+                      "name": "feed"
+                    }
+                  }
+                ],
+                "descriptions": [
+                  {
+                    "text": "Salaried & business filings. Tax planning, 80C/80D, HRA, home loan deductions handled for you."
+                  }
+                ],
+                "additional_data": {
+                  "lead_gen_form_id": "REPLACE_AFTER_LEAD_FORM_CREATED"
+                }
+              }
+            }
+          }
+        }
+      ],
+      "mock": {
+        "form_id": "form_bb2634cd845881",
+        "steps": [
+          {
+            "step": 1,
+            "endpoint": "act_998848709363610/campaigns",
+            "payload": {
+              "name": "Kapoor & Associates — Chartered Accountants — Leads STAMP",
+              "objective": "OUTCOME_LEADS",
+              "status": "ACTIVE",
+              "special_ad_categories": [
+                "NONE"
+              ],
+              "buying_type": "AUCTION",
+              "is_adset_budget_sharing_enabled": false,
+              "spend_cap": 1800000
+            },
+            "id": "1000000001"
+          },
+          {
+            "step": 2,
+            "endpoint": "act_998848709363610/adsets",
+            "payload": {
+              "name": "Kapoor & Associates — Chartered Accountants — Default — Ad set STAMP",
+              "campaign_id": "1000000001",
+              "status": "ACTIVE",
+              "optimization_goal": "LEAD_GENERATION",
+              "billing_event": "IMPRESSIONS",
+              "bid_strategy": "LOWEST_COST_WITHOUT_CAP",
+              "destination_type": "ON_AD",
+              "targeting": {
+                "geo_locations": {
+                  "countries": [
+                    "IN"
+                  ],
+                  "location_types": [
+                    "home",
+                    "recent"
+                  ]
+                },
+                "age_min": 24,
+                "age_max": 55,
+                "genders": [
+                  2
+                ],
+                "locales": [
+                  6
+                ],
+                "flexible_spec": [
+                  {
+                    "interests": [
+                      {
+                        "id": "6003020834693",
+                        "name": "Income tax"
+                      },
+                      {
+                        "id": "6003107902433",
+                        "name": "Personal finance"
+                      }
+                    ]
+                  }
+                ],
+                "publisher_platforms": [
+                  "facebook",
+                  "instagram"
+                ],
+                "targeting_automation": {
+                  "advantage_audience": 0
+                }
+              },
+              "daily_budget": 60000,
+              "start_time": "2026-12-01T00:00:00+00:00",
+              "end_time": "2026-12-31T23:59:00+00:00",
+              "promoted_object": {
+                "page_id": "1033691806503292"
+              }
+            },
+            "id": "1000000002"
+          },
+          {
+            "step": 3,
+            "endpoint": "act_998848709363610/ads",
+            "payload": {
+              "name": "Kapoor & Associates — Chartered Accountants — single image STAMP",
+              "adset_id": "1000000002",
+              "status": "ACTIVE",
+              "creative": {
+                "name": "Kapoor & Associates — Chartered Accountants creative STAMP",
+                "object_story_spec": {
+                  "page_id": "1033691806503292",
+                  "instagram_actor_id": "17841400000000000"
+                },
+                "asset_feed_spec": {
+                  "images": [
+                    {
+                      "hash": "feedhash",
+                      "name": "feed"
+                    },
+                    {
+                      "hash": "storyhash",
+                      "name": "story"
+                    },
+                    {
+                      "hash": "portraithash",
+                      "name": "portrait"
+                    }
+                  ],
+                  "bodies": [
+                    {
+                      "text": "File your ITR before 31 July — avoid the ₹5,000 late fee. Expert CA review."
+                    }
+                  ],
+                  "titles": [
+                    {
+                      "text": "ITR filing by licensed CAs — from ₹999,…"
+                    }
+                  ],
+                  "link_urls": [
+                    {
+                      "website_url": "https://example.com"
+                    }
+                  ],
+                  "ad_formats": [
+                    "SINGLE_IMAGE"
+                  ],
+                  "call_to_action_types": [
+                    "GET_QUOTE"
+                  ],
+                  "asset_customization_rules": [
+                    {
+                      "customization_spec": {
+                        "publisher_platforms": [
+                          "facebook",
+                          "instagram"
+                        ],
+                        "facebook_positions": [
+                          "story"
+                        ],
+                        "instagram_positions": [
+                          "story",
+                          "reels"
+                        ]
+                      },
+                      "image_label": {
+                        "name": "story"
+                      }
+                    },
+                    {
+                      "customization_spec": {
+                        "publisher_platforms": [
+                          "instagram"
+                        ],
+                        "instagram_positions": [
+                          "stream"
+                        ]
+                      },
+                      "image_label": {
+                        "name": "portrait"
+                      }
+                    },
+                    {
+                      "customization_spec": {
+                        "publisher_platforms": [
+                          "facebook",
+                          "instagram"
+                        ],
+                        "facebook_positions": [
+                          "feed"
+                        ],
+                        "instagram_positions": [
+                          "stream"
+                        ]
+                      },
+                      "image_label": {
+                        "name": "feed"
+                      }
+                    }
+                  ],
+                  "descriptions": [
+                    {
+                      "text": "Salaried & business filings. Tax planning, 80C/80D, HRA, home loan deductions handled for you."
+                    }
+                  ],
+                  "additional_data": {
+                    "lead_gen_form_id": "form_bb2634cd845881"
+                  }
+                }
+              }
+            },
+            "id": "1000000003"
+          }
+        ]
+      },
+      "render_kwargs": {
+        "client": {
+          "business_name": "Kapoor & Associates — Chartered Accountants",
+          "ad_account_id": "998848709363610",
+          "page_id": "1033691806503292",
+          "instagram_actor_id": "17841400000000000"
+        },
+        "currency": "INR",
+        "ad_copy": {
+          "primary_text": "File your ITR before 31 July — avoid the ₹5,000 late fee. Expert CA review.",
+          "headline": "ITR filing by licensed CAs — from ₹999, personalised review",
+          "description": "Salaried & business filings. Tax planning, 80C/80D, HRA, home loan deductions handled for you.",
+          "call_to_action": null,
+          "age_min": 24,
+          "age_max": 55,
+          "gender": "female",
+          "interest_targeting": [
+            {
+              "id": "6003020834693",
+              "name": "Income tax"
+            },
+            "raw name dropped",
+            {
+              "id": "0",
+              "name": "zero id dropped"
+            },
+            {
+              "id": "6003107902433",
+              "name": "Personal finance"
+            }
+          ]
+        },
+        "daily_budget": 600.0,
+        "epicenters": [],
+        "destination": "Lead Form",
+        "lead_form_config": {
+          "name": "ITR enquiry 250101-120000",
+          "privacy_url": "https://kapoorca.in/privacy",
+          "custom_questions": [
+            "Salaried or business?",
+            "  "
+          ],
+          "prefilled_questions": [
+            "FULL_NAME",
+            "PHONE_NUMBER",
+            "CITY"
+          ]
+        },
+        "image_hash": "feedhash",
+        "image_hash_story": "storyhash",
+        "image_hash_portrait": "portraithash",
+        "start_date": "2026-12-01",
+        "end_date": "2026-12-31",
+        "launch_status": "ACTIVE"
+      }
+    },
+    {
+      "name": "render_website_usd_country",
+      "input": {
+        "ad_account_id": "998848709363610",
+        "campaign": {
+          "name": "Brooklyn Reads — Traffic STAMP",
+          "objective": "OUTCOME_TRAFFIC",
+          "status": "PAUSED",
+          "special_ad_categories": [
+            "NONE"
+          ],
+          "buying_type": "AUCTION",
+          "spend_cap": 60000
+        },
+        "ad_set": {
+          "name": "Brooklyn Reads — Default — Ad set STAMP",
+          "optimization_goal": "LINK_CLICKS",
+          "billing_event": "IMPRESSIONS",
+          "bid_strategy": "COST_CAP",
+          "daily_budget": 2000,
+          "destination_type": "WEBSITE",
+          "targeting": {
+            "geo_locations": {
+              "location_types": [
+                "home",
+                "recent"
+              ],
+              "countries": [
+                "US"
+              ]
+            },
+            "age_min": 18,
+            "age_max": 65,
+            "genders": [
+              1
+            ],
+            "locales": [
+              6
+            ],
+            "flexible_spec": [],
+            "publisher_platforms": [
+              "facebook",
+              "instagram"
+            ],
+            "targeting_automation": {
+              "advantage_audience": 0
+            }
+          }
+        },
+        "ad": {
+          "name": "Brooklyn Reads — single image STAMP",
+          "creative": {
+            "name": "Brooklyn Reads creative STAMP",
+            "object_story_spec": {
+              "page_id": "1033691806503292",
+              "link_data": {
+                "image_hash": "abc",
+                "message": "Spring fiction is here.",
+                "name": "Spring 2026 fiction",
+                "link": "https://brooklynreads.com",
+                "call_to_action": {
+                  "type": "LEARN_MORE",
+                  "value_link": "https://brooklynreads.com"
+                },
+                "image_hash_portrait": "portraitonly"
+              }
+            }
+          }
+        }
+      },
+      "operations": [
+        {
+          "resourceType": "campaign",
+          "refKey": "campaign",
+          "endpoint": "act_998848709363610/campaigns",
+          "payload": {
+            "name": "Brooklyn Reads — Traffic STAMP",
+            "objective": "OUTCOME_TRAFFIC",
+            "status": "PAUSED",
+            "special_ad_categories": [
+              "NONE"
+            ],
+            "buying_type": "AUCTION",
+            "is_adset_budget_sharing_enabled": false,
+            "spend_cap": 60000
+          }
+        },
+        {
+          "resourceType": "ad_set",
+          "refKey": "ad_set",
+          "endpoint": "act_998848709363610/adsets",
+          "payload": {
+            "name": "Brooklyn Reads — Default — Ad set STAMP",
+            "campaign_id": "${CAMPAIGN_ID}",
+            "status": "PAUSED",
+            "optimization_goal": "LINK_CLICKS",
+            "billing_event": "IMPRESSIONS",
+            "bid_strategy": "COST_CAP",
+            "destination_type": "WEBSITE",
+            "targeting": {
+              "geo_locations": {
+                "countries": [
+                  "US"
+                ],
+                "location_types": [
+                  "home",
+                  "recent"
+                ]
+              },
+              "age_min": 18,
+              "age_max": 65,
+              "genders": [
+                1
+              ],
+              "locales": [
+                6
+              ],
+              "publisher_platforms": [
+                "facebook",
+                "instagram"
+              ],
+              "targeting_automation": {
+                "advantage_audience": 0
+              }
+            },
+            "daily_budget": 2000
+          }
+        },
+        {
+          "resourceType": "ad",
+          "refKey": "ad",
+          "endpoint": "act_998848709363610/ads",
+          "payload": {
+            "name": "Brooklyn Reads — single image STAMP",
+            "adset_id": "${AD_SET_ID}",
+            "status": "PAUSED",
+            "creative": {
+              "name": "Brooklyn Reads creative STAMP",
+              "object_story_spec": {
+                "page_id": "1033691806503292"
+              },
+              "asset_feed_spec": {
+                "images": [
+                  {
+                    "hash": "abc",
+                    "name": "feed"
+                  },
+                  {
+                    "hash": "portraitonly",
+                    "name": "portrait"
+                  }
+                ],
+                "bodies": [
+                  {
+                    "text": "Spring fiction is here."
+                  }
+                ],
+                "titles": [
+                  {
+                    "text": "Spring 2026 fiction"
+                  }
+                ],
+                "link_urls": [
+                  {
+                    "website_url": "https://brooklynreads.com"
+                  }
+                ],
+                "ad_formats": [
+                  "SINGLE_IMAGE"
+                ],
+                "call_to_action_types": [
+                  "LEARN_MORE"
+                ],
+                "asset_customization_rules": [
+                  {
+                    "customization_spec": {
+                      "publisher_platforms": [
+                        "instagram"
+                      ],
+                      "instagram_positions": [
+                        "stream"
+                      ]
+                    },
+                    "image_label": {
+                      "name": "portrait"
+                    }
+                  },
+                  {
+                    "customization_spec": {
+                      "publisher_platforms": [
+                        "facebook",
+                        "instagram"
+                      ],
+                      "facebook_positions": [
+                        "feed"
+                      ],
+                      "instagram_positions": [
+                        "stream"
+                      ]
+                    },
+                    "image_label": {
+                      "name": "feed"
+                    }
+                  }
+                ]
+              }
+            }
+          }
+        }
+      ],
+      "mock": {
+        "form_id": null,
+        "steps": [
+          {
+            "step": 1,
+            "endpoint": "act_998848709363610/campaigns",
+            "payload": {
+              "name": "Brooklyn Reads — Traffic STAMP",
+              "objective": "OUTCOME_TRAFFIC",
+              "status": "PAUSED",
+              "special_ad_categories": [
+                "NONE"
+              ],
+              "buying_type": "AUCTION",
+              "is_adset_budget_sharing_enabled": false,
+              "spend_cap": 60000
+            },
+            "id": "1000000001"
+          },
+          {
+            "step": 2,
+            "endpoint": "act_998848709363610/adsets",
+            "payload": {
+              "name": "Brooklyn Reads — Default — Ad set STAMP",
+              "campaign_id": "1000000001",
+              "status": "PAUSED",
+              "optimization_goal": "LINK_CLICKS",
+              "billing_event": "IMPRESSIONS",
+              "bid_strategy": "COST_CAP",
+              "destination_type": "WEBSITE",
+              "targeting": {
+                "geo_locations": {
+                  "countries": [
+                    "US"
+                  ],
+                  "location_types": [
+                    "home",
+                    "recent"
+                  ]
+                },
+                "age_min": 18,
+                "age_max": 65,
+                "genders": [
+                  1
+                ],
+                "locales": [
+                  6
+                ],
+                "publisher_platforms": [
+                  "facebook",
+                  "instagram"
+                ],
+                "targeting_automation": {
+                  "advantage_audience": 0
+                }
+              },
+              "daily_budget": 2000
+            },
+            "id": "1000000002"
+          },
+          {
+            "step": 3,
+            "endpoint": "act_998848709363610/ads",
+            "payload": {
+              "name": "Brooklyn Reads — single image STAMP",
+              "adset_id": "1000000002",
+              "status": "PAUSED",
+              "creative": {
+                "name": "Brooklyn Reads creative STAMP",
+                "object_story_spec": {
+                  "page_id": "1033691806503292"
+                },
+                "asset_feed_spec": {
+                  "images": [
+                    {
+                      "hash": "abc",
+                      "name": "feed"
+                    },
+                    {
+                      "hash": "portraitonly",
+                      "name": "portrait"
+                    }
+                  ],
+                  "bodies": [
+                    {
+                      "text": "Spring fiction is here."
+                    }
+                  ],
+                  "titles": [
+                    {
+                      "text": "Spring 2026 fiction"
+                    }
+                  ],
+                  "link_urls": [
+                    {
+                      "website_url": "https://brooklynreads.com"
+                    }
+                  ],
+                  "ad_formats": [
+                    "SINGLE_IMAGE"
+                  ],
+                  "call_to_action_types": [
+                    "LEARN_MORE"
+                  ],
+                  "asset_customization_rules": [
+                    {
+                      "customization_spec": {
+                        "publisher_platforms": [
+                          "instagram"
+                        ],
+                        "instagram_positions": [
+                          "stream"
+                        ]
+                      },
+                      "image_label": {
+                        "name": "portrait"
+                      }
+                    },
+                    {
+                      "customization_spec": {
+                        "publisher_platforms": [
+                          "facebook",
+                          "instagram"
+                        ],
+                        "facebook_positions": [
+                          "feed"
+                        ],
+                        "instagram_positions": [
+                          "stream"
+                        ]
+                      },
+                      "image_label": {
+                        "name": "feed"
+                      }
+                    }
+                  ]
+                }
+              }
+            },
+            "id": "1000000003"
+          }
+        ]
+      },
+      "render_kwargs": {
+        "client": {
+          "business_name": "Brooklyn Reads",
+          "ad_account_id": "998848709363610",
+          "page_id": "1033691806503292",
+          "instagram_actor_id": ""
+        },
+        "currency": "USD",
+        "ad_copy": {
+          "primary_text": "Spring fiction is here.",
+          "headline": "Spring 2026 fiction",
+          "gender": "male"
+        },
+        "daily_budget": 20.0,
+        "epicenters": [],
+        "destination": "Website",
+        "landing_page_url": "https://brooklynreads.com",
+        "image_hash": "abc",
+        "image_hash_portrait": "portraitonly",
+        "bid_strategy": "COST_CAP"
+      }
+    }
+  ],
+  "invalid": [
+    {
+      "name": "no_budget",
+      "input": {
+        "ad_account_id": "1",
+        "campaign": {
+          "name": "c"
+        },
+        "ad_set": {
+          "name": "s",
+          "targeting": {
+            "geo_locations": {
+              "countries": [
+                "IN"
+              ]
+            }
+          }
+        },
+        "ad": {
+          "name": "a",
+          "creative": {
+            "object_story_spec": {
+              "page_id": "p",
+              "link_data": {
+                "image_hash": "h",
+                "message": "m",
+                "name": "n",
+                "link": "https://x.y",
+                "call_to_action": {
+                  "type": "LEARN_MORE"
+                }
+              }
+            }
+          }
+        }
+      },
+      "errors": [
+        "ad_set"
+      ]
+    },
+    {
+      "name": "both_budgets",
+      "input": {
+        "ad_account_id": "1",
+        "campaign": {
+          "name": "c"
+        },
+        "ad_set": {
+          "name": "s",
+          "daily_budget": 100,
+          "targeting": {
+            "geo_locations": {
+              "countries": [
+                "IN"
+              ]
+            }
+          },
+          "lifetime_budget": 5
+        },
+        "ad": {
+          "name": "a",
+          "creative": {
+            "object_story_spec": {
+              "page_id": "p",
+              "link_data": {
+                "image_hash": "h",
+                "message": "m",
+                "name": "n",
+                "link": "https://x.y",
+                "call_to_action": {
+                  "type": "LEARN_MORE"
+                }
+              }
+            }
+          }
+        }
+      },
+      "errors": [
+        "ad_set"
+      ]
+    },
+    {
+      "name": "age_inverted",
+      "input": {
+        "ad_account_id": "1",
+        "campaign": {
+          "name": "c"
+        },
+        "ad_set": {
+          "name": "s",
+          "daily_budget": 100,
+          "targeting": {
+            "geo_locations": {},
+            "age_min": 40,
+            "age_max": 30
+          }
+        },
+        "ad": {
+          "name": "a",
+          "creative": {
+            "object_story_spec": {
+              "page_id": "p",
+              "link_data": {
+                "image_hash": "h",
+                "message": "m",
+                "name": "n",
+                "link": "https://x.y",
+                "call_to_action": {
+                  "type": "LEARN_MORE"
+                }
+              }
+            }
+          }
+        }
+      },
+      "errors": [
+        "ad_set.targeting"
+      ]
+    },
+    {
+      "name": "age_too_low",
+      "input": {
+        "ad_account_id": "1",
+        "campaign": {
+          "name": "c"
+        },
+        "ad_set": {
+          "name": "s",
+          "daily_budget": 100,
+          "targeting": {
+            "geo_locations": {},
+            "age_min": 12
+          }
+        },
+        "ad": {
+          "name": "a",
+          "creative": {
+            "object_story_spec": {
+              "page_id": "p",
+              "link_data": {
+                "image_hash": "h",
+                "message": "m",
+                "name": "n",
+                "link": "https://x.y",
+                "call_to_action": {
+                  "type": "LEARN_MORE"
+                }
+              }
+            }
+          }
+        }
+      },
+      "errors": [
+        "ad_set.targeting.age_min"
+      ]
+    },
+    {
+      "name": "bad_objective",
+      "input": {
+        "ad_account_id": "1",
+        "campaign": {
+          "name": "c",
+          "objective": "OUTCOME_FOO"
+        },
+        "ad_set": {
+          "name": "s",
+          "daily_budget": 100,
+          "targeting": {
+            "geo_locations": {
+              "countries": [
+                "IN"
+              ]
+            }
+          }
+        },
+        "ad": {
+          "name": "a",
+          "creative": {
+            "object_story_spec": {
+              "page_id": "p",
+              "link_data": {
+                "image_hash": "h",
+                "message": "m",
+                "name": "n",
+                "link": "https://x.y",
+                "call_to_action": {
+                  "type": "LEARN_MORE"
+                }
+              }
+            }
+          }
+        }
+      },
+      "errors": [
+        "campaign.objective"
+      ]
+    },
+    {
+      "name": "category_without_country",
+      "input": {
+        "ad_account_id": "1",
+        "campaign": {
+          "name": "c",
+          "special_ad_categories": [
+            "HOUSING"
+          ]
+        },
+        "ad_set": {
+          "name": "s",
+          "daily_budget": 100,
+          "targeting": {
+            "geo_locations": {
+              "countries": [
+                "IN"
+              ]
+            }
+          }
+        },
+        "ad": {
+          "name": "a",
+          "creative": {
+            "object_story_spec": {
+              "page_id": "p",
+              "link_data": {
+                "image_hash": "h",
+                "message": "m",
+                "name": "n",
+                "link": "https://x.y",
+                "call_to_action": {
+                  "type": "LEARN_MORE"
+                }
+              }
+            }
+          }
+        }
+      },
+      "errors": [
+        "campaign"
+      ]
+    },
+    {
+      "name": "end_before_start",
+      "input": {
+        "ad_account_id": "1",
+        "campaign": {
+          "name": "c"
+        },
+        "ad_set": {
+          "name": "s",
+          "daily_budget": 100,
+          "targeting": {
+            "geo_locations": {
+              "countries": [
+                "IN"
+              ]
+            }
+          },
+          "start_time": "2026-05-15T09:00:00+05:30",
+          "end_time": "2026-05-15T03:00:00+00:00"
+        },
+        "ad": {
+          "name": "a",
+          "creative": {
+            "object_story_spec": {
+              "page_id": "p",
+              "link_data": {
+                "image_hash": "h",
+                "message": "m",
+                "name": "n",
+                "link": "https://x.y",
+                "call_to_action": {
+                  "type": "LEARN_MORE"
+                }
+              }
+            }
+          }
+        }
+      },
+      "errors": [
+        "ad_set"
+      ]
+    },
+    {
+      "name": "bad_cta",
+      "input": {
+        "ad_account_id": "1",
+        "campaign": {
+          "name": "c"
+        },
+        "ad_set": {
+          "name": "s",
+          "daily_budget": 100,
+          "targeting": {
+            "geo_locations": {
+              "countries": [
+                "IN"
+              ]
+            }
+          }
+        },
+        "ad": {
+          "name": "a",
+          "creative": {
+            "object_story_spec": {
+              "page_id": "p",
+              "link_data": {
+                "image_hash": "h",
+                "message": "m",
+                "name": "n",
+                "link": "https://x.y",
+                "call_to_action": {
+                  "type": "CLICK_HERE"
+                }
+              }
+            }
+          }
+        }
+      },
+      "errors": [
+        "ad.creative.object_story_spec.link_data.call_to_action.type"
+      ]
+    },
+    {
+      "name": "negative_spend_cap",
+      "input": {
+        "ad_account_id": "1",
+        "campaign": {
+          "name": "c",
+          "spend_cap": -1
+        },
+        "ad_set": {
+          "name": "s",
+          "daily_budget": 100,
+          "targeting": {
+            "geo_locations": {
+              "countries": [
+                "IN"
+              ]
+            }
+          }
+        },
+        "ad": {
+          "name": "a",
+          "creative": {
+            "object_story_spec": {
+              "page_id": "p",
+              "link_data": {
+                "image_hash": "h",
+                "message": "m",
+                "name": "n",
+                "link": "https://x.y",
+                "call_to_action": {
+                  "type": "LEARN_MORE"
+                }
+              }
+            }
+          }
+        }
+      },
+      "errors": [
+        "campaign.spend_cap"
+      ]
+    },
+    {
+      "name": "radius_zero",
+      "input": {
+        "ad_account_id": "1",
+        "campaign": {
+          "name": "c"
+        },
+        "ad_set": {
+          "name": "s",
+          "daily_budget": 100,
+          "targeting": {
+            "geo_locations": {
+              "custom_locations": [
+                {
+                  "latitude": 1,
+                  "longitude": 2,
+                  "radius": 0
+                }
+              ]
+            }
+          }
+        },
+        "ad": {
+          "name": "a",
+          "creative": {
+            "object_story_spec": {
+              "page_id": "p",
+              "link_data": {
+                "image_hash": "h",
+                "message": "m",
+                "name": "n",
+                "link": "https://x.y",
+                "call_to_action": {
+                  "type": "LEARN_MORE"
+                }
+              }
+            }
+          }
+        }
+      },
+      "errors": [
+        "ad_set.targeting.geo_locations.custom_locations.0.radius"
+      ]
+    }
+  ]
+}
