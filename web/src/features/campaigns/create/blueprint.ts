@@ -343,8 +343,6 @@ export const PLANNED: Partial<Record<SectionId, string[]>> = {
     "Spend cap editor and ad scheduling (dayparting)",
   ],
   audience: [
-    "Map with the pins and circles; drag to adjust",
-    "Estimated audience size with a too-narrow warning",
     "Match AI interests to real Meta interests (country-aware)",
     "More custom audiences: lead-form openers, video viewers, WhatsApp chatters",
   ],

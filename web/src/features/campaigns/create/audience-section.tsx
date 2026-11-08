@@ -7,11 +7,22 @@ import { Field, Input, Select } from "@/components/ui/field";
 import { Callout } from "@/components/ui/surface";
 import { LANGUAGE_TO_LOCALES } from "../engine/presets.ts";
 import { resolveAreaAction } from "../ai/actions";
-import { SCOPE_INFO } from "../ai/prompts.ts";
+import dynamic from "next/dynamic";
+import { SCOPE_INFO, type ReachScope } from "../ai/prompts.ts";
 import { DEVICE_LABELS, type DeviceOs, type DraftPin } from "./blueprint";
 import type { SectionProps } from "./create-campaign";
+import { AudienceEstimate } from "./audience-estimate";
 import { AudienceTargeting } from "./audience-targeting";
 import { ChipInput, ChoiceCard, Group, Header, Planned, Segmented, set } from "./sections";
+
+// Map is browser-only (WebGL); loads after the page.
+const AreaMap = dynamic(() => import("./area-map"), {
+  ssr: false,
+  loading: () => <div className="grid h-72 place-items-center rounded-card bg-lavender-soft text-[13px] text-ink-muted">Loading map…</div>,
+});
+
+/** Radius for a pin dropped on the map, by reach scope. */
+const SCOPE_RADIUS: Record<ReachScope, number> = { "hyper-local": 1.5, local: 5, "city-wide": 15, metro: 40 };
 
 const RADII = [1, 1.5, 2, 3, 5, 8, 10, 15, 20, 25, 40, 60, 80];
 
@@ -22,6 +33,7 @@ export function AudienceSection({ draft, update, goTo, clients }: SectionProps) 
   const [area, setArea] = useState("");
   const [areaError, setAreaError] = useState<string | null>(null);
   const [pending, start] = useTransition();
+  const [addMode, setAddMode] = useState(false);
 
   const setPins = (fn: (p: DraftPin[]) => DraftPin[]) => update((d) => ({ ...d, audience: { ...d.audience, locations: fn(d.audience.locations) } }));
 
@@ -48,6 +60,8 @@ export function AudienceSection({ draft, update, goTo, clients }: SectionProps) 
     <>
       <Header level="Ad set" title="Audience" blurb="Who should see the ad. For local businesses, a tight area matters more than anything else." />
       <div className="flex flex-col gap-6">
+        <AudienceEstimate draft={draft} />
+
         <Group title="Who to target" hint="Core audience works for most local businesses. Add custom or lookalike audiences when you have customers or engagers.">
           <AudienceTargeting draft={draft} update={update} client={clients.find((c) => c.id === draft.clientId)} />
         </Group>
@@ -127,10 +141,22 @@ export function AudienceSection({ draft, update, goTo, clients }: SectionProps) 
             {areaError && <p className="text-[13px] text-tomato-700">{areaError}</p>}
           </div>
 
-          <div className="grid h-32 place-items-center rounded-card bg-lavender-soft text-[14px] text-ink-muted">
-            <span className="flex items-center gap-2">
-              <MapPin className="size-4" aria-hidden /> Map preview — coming soon
-            </span>
+          <div className="flex flex-col gap-2">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <p className="text-[13px] text-ink-muted">Drag a numbered pin to move an area.</p>
+              <Button type="button" size="sm" variant={addMode ? "primary" : "secondary"} onClick={() => setAddMode((v) => !v)} aria-pressed={addMode}>
+                <MapPin className="size-4" aria-hidden /> {addMode ? "Click the map to drop a pin…" : "Add pin by clicking"}
+              </Button>
+            </div>
+            <AreaMap
+              pins={a.locations}
+              addMode={addMode}
+              onMove={(i, lat, lng) => setPins((all) => all.map((x, j) => (j === i ? { ...x, lat, lng } : x)))}
+              onAdd={(lat, lng) => {
+                setPins((all) => [...all, { name: `Dropped pin ${all.length + 1}`, lat, lng, radiusKm: SCOPE_RADIUS[draft.setup.scope], why: "Added on the map" }]);
+                setAddMode(false);
+              }}
+            />
           </div>
         </Group>
 
