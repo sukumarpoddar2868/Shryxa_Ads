@@ -9,7 +9,8 @@ import { Callout } from "@/components/ui/surface";
 import { CURRENCIES, CURRENCY } from "../engine/presets.ts";
 import { generateSetupAction } from "../ai/actions";
 import { REACH_SCOPES, SCOPE_INFO } from "../ai/prompts.ts";
-import { DESTINATIONS_FOR, OBJECTIVE_OPTIONS, defaultDestination, type ObjectiveId } from "./blueprint";
+import { OBJECTIVE_OPTIONS, defaultCta, defaultDestination, destinationOptions, type ObjectiveId } from "./blueprint";
+import { DestinationDetails } from "./destination-details";
 import type { SectionProps } from "./create-campaign";
 import { ChipInput, ChoiceCard, Group, Header, Planned, Segmented, TextArea, set } from "./sections";
 
@@ -21,7 +22,7 @@ export function StartSection({ draft, update, clients, isAgency, goTo }: Section
   const s = draft.setup;
   const client = clients.find((c) => c.id === draft.clientId);
   const objective = OBJECTIVE_OPTIONS.find((o) => o.id === draft.objective);
-  const destinations = draft.objective === "OUTCOME_LEADS" || draft.objective === "OUTCOME_TRAFFIC" ? DESTINATIONS_FOR[draft.objective] : [];
+  const destinations = draft.objective ? destinationOptions(draft.objective, client) : [];
   const destination = draft.ad.destination;
   const [pending, start] = useTransition();
   const [error, setError] = useState<string | null>(null);
@@ -33,7 +34,14 @@ export function StartSection({ draft, update, clients, isAgency, goTo }: Section
     update((d) => ({
       ...d,
       objective: id || null,
-      ad: id ? { ...d.ad, destination: defaultDestination(id), cta: id === "OUTCOME_TRAFFIC" ? "LEARN_MORE" : "GET_QUOTE" } : d.ad,
+      ad: id
+        ? {
+            ...d.ad,
+            destination: defaultDestination(id),
+            cta: defaultCta(id, defaultDestination(id)),
+            conversionEvent: id === "OUTCOME_SALES" ? "PURCHASE" : "LEAD",
+          }
+        : d.ad,
     }));
 
   const generate = () => {
@@ -41,11 +49,12 @@ export function StartSection({ draft, update, clients, isAgency, goTo }: Section
     setError(null);
     setFieldErrors({});
     setNotice(null);
-    const objectiveId = draft.objective as "OUTCOME_LEADS" | "OUTCOME_TRAFFIC";
+    const objectiveId = draft.objective;
     start(async () => {
       const r = await generateSetupAction({
         clientId: draft.clientId!,
         objective: objectiveId,
+        destination: draft.ad.destination,
         businessName: s.businessName,
         website: s.website.trim(),
         about: s.about,
@@ -79,12 +88,24 @@ export function StartSection({ draft, update, clients, isAgency, goTo }: Section
         placements: c.device_os === "all" ? { ...d.placements, mode: "advantage" } : { mode: "manual", facebook: true, instagram: true },
         ad: {
           ...d.ad,
-          url: d.ad.destination === "website" ? s.website.trim() : d.ad.url,
+          url: d.ad.destination === "website" && s.website.trim() ? s.website.trim() : d.ad.url,
           primaryText: c.primary_text,
           headline: c.headline,
           description: c.description ?? "",
           cta: c.call_to_action,
           cardIdeas: c.carousel_cards,
+          whatsapp: {
+            ...d.ad.whatsapp,
+            greeting: c.whatsapp_greeting || d.ad.whatsapp.greeting,
+            prefill: c.whatsapp_prefill || d.ad.whatsapp.prefill,
+            questions: c.whatsapp_questions.length ? c.whatsapp_questions : d.ad.whatsapp.questions,
+          },
+          leadForm: {
+            ...d.ad.leadForm,
+            name: d.ad.leadForm.name || `${s.businessName} enquiry`.slice(0, 60),
+            questions: c.lead_questions,
+            thankYou: c.thank_you_message || d.ad.leadForm.thankYou,
+          },
           // Already a carousel? Refresh card text, keep the uploaded images.
           carousel: {
             ...d.ad.carousel,
@@ -136,23 +157,14 @@ export function StartSection({ draft, update, clients, isAgency, goTo }: Section
                     badge={o.note}
                     disabled={!o.available}
                     selected={o.available && destination === o.id}
-                    onSelect={() => o.id !== "whatsapp" && o.id !== "call" && set(update, "ad", { destination: o.id })}
+                    onSelect={() => set(update, "ad", { destination: o.id, cta: defaultCta(draft.objective!, o.id) })}
                   />
                 ))}
               </div>
             </div>
           )}
 
-          {draft.objective && (
-            <Field
-              id="website"
-              label={destination === "website" ? "Website page" : "Website (optional)"}
-              error={fe("website")}
-              hint={destination === "website" ? "The page people land on." : "Shown on the form's thank-you screen."}
-            >
-              <Input id="website" type="url" placeholder="https://" value={s.website} aria-invalid={!!fe("website")} onChange={(e) => set(update, "setup", { website: e.target.value })} />
-            </Field>
-          )}
+          {draft.objective && <DestinationDetails draft={draft} update={update} client={client} websiteError={fe("website")} />}
         </Group>
 
         {/* 2. About the business */}

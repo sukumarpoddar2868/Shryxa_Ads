@@ -1,7 +1,6 @@
-import Link from "next/link";
 import { Suspense } from "react";
 import { LogOut } from "lucide-react";
-import { Wordmark } from "@/components/brand/wordmark";
+import { AppSidebar } from "@/components/shell/app-sidebar";
 import { NavLinks, SidebarNav } from "@/components/shell/sidebar-nav";
 import { logoutAction } from "@/features/auth/actions";
 import { requireUser } from "@/features/auth/dal";
@@ -13,22 +12,21 @@ import { requireUser } from "@/features/auth/dal";
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   return (
     <div className="flex min-h-dvh flex-col bg-lavender-soft md:flex-row">
-      <aside className="flex shrink-0 items-center justify-between gap-4 bg-ink px-4 py-3 text-paper md:sticky md:top-0 md:h-dvh md:w-60 md:flex-col md:items-stretch md:justify-start md:px-4 md:py-6">
-        <Link href="/dashboard" className="px-2 md:mb-8" aria-label="Shryxa Ads dashboard">
-          <Wordmark className="text-[26px] text-paper" />
-        </Link>
-        <Suspense fallback={<NavLinks />}>
-          <UserNav />
-        </Suspense>
-        <div className="md:mt-auto">
+      <AppSidebar
+        nav={
+          <Suspense fallback={<NavLinks />}>
+            <UserNav />
+          </Suspense>
+        }
+        footer={
           <Suspense fallback={<div className="h-10" />}>
             <UserBadge />
           </Suspense>
-        </div>
-      </aside>
+        }
+      />
 
       <main className="min-w-0 flex-1 px-4 py-8 sm:px-8 md:py-10">
-        <div className="mx-auto max-w-[1200px]">
+        <div className="mx-auto max-w-[1400px]">
           <Suspense fallback={<PageSkeleton />}>
             <Gate>{children}</Gate>
           </Suspense>
@@ -52,16 +50,18 @@ async function UserBadge() {
   const user = await requireUser();
   return (
     <div className="flex items-center gap-2 md:flex-col md:items-stretch">
-      <p className="hidden truncate px-2 text-[13px] text-paper/60 md:block" title={user.email}>
+      <p className="hidden truncate px-2 text-[13px] text-paper/60 md:block md:group-data-[collapsed=true]/sidebar:hidden" title={user.email}>
         {user.email}
       </p>
       <form action={logoutAction}>
         <button
           type="submit"
-          className="flex w-full items-center gap-3 rounded-pill px-4 py-2.5 text-[15px] font-bold text-paper/75 hover:bg-paper/10 hover:text-paper"
+          aria-label="Sign out"
+          title="Sign out"
+          className="flex w-full items-center gap-3 rounded-pill px-4 py-2.5 text-[15px] font-bold text-paper/75 hover:bg-paper/10 hover:text-paper md:group-data-[collapsed=true]/sidebar:justify-center md:group-data-[collapsed=true]/sidebar:px-0"
         >
           <LogOut aria-hidden className="size-[18px]" strokeWidth={1.75} />
-          <span className="hidden sm:inline">Sign out</span>
+          <span className="hidden sm:inline md:group-data-[collapsed=true]/sidebar:hidden">Sign out</span>
         </button>
       </form>
     </div>

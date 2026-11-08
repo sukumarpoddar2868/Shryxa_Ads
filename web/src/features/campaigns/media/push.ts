@@ -1,7 +1,7 @@
 import "server-only";
 import { createHash } from "node:crypto";
 import { actId } from "@/features/meta-connect/discovery";
-import { graphPost } from "@/lib/meta/graph";
+import { graphGet, graphPost } from "@/lib/meta/graph";
 import { db } from "@/lib/supabase/server";
 import { uploadImageLive, uploadImageMock } from "../images";
 import { MEDIA_BUCKET } from "./rules";
@@ -32,5 +32,19 @@ export async function pushVideo(userId: number, path: string, target: { mode: "m
   if (error || !data) throw new Error("Couldn't read the uploaded video. Please upload it again.");
   const res = await graphPost<{ id?: string }>(`${actId(target.adAccountId)}/advideos`, target.token, { file_url: data.signedUrl });
   if (!res.id) throw new Error("Meta accepted the video but returned no id.");
+  await waitForVideo(target.token, res.id);
   return res.id;
+}
+
+/** Meta processes uploads asynchronously; ads can't use a video until it's ready. */
+async function waitForVideo(token: string, videoId: string, timeoutMs = 120_000): Promise<void> {
+  const until = Date.now() + timeoutMs;
+  while (Date.now() < until) {
+    const v = await graphGet<{ status?: { video_status?: string } }>(videoId, token, { fields: "status" }).catch(() => null);
+    const s = v?.status?.video_status;
+    if (s === "ready") return;
+    if (s === "error") throw new Error("Meta couldn't process this video. Try an MP4 (H.264) file.");
+    await new Promise((r) => setTimeout(r, 4000));
+  }
+  throw new Error("Meta is still processing the video. Wait a minute and launch again.");
 }

@@ -42,6 +42,7 @@ export function CarouselEditor({ draft, update }: Pick<SectionProps, "draft" | "
         about: draft.setup.about,
         offer: draft.setup.offer,
         destination: draft.ad.destination,
+        objective: draft.objective ?? undefined,
         count: cards.length,
       });
       if (!r.ok) return setAiError(r.error);

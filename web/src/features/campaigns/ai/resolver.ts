@@ -49,6 +49,7 @@ export async function generateCopy(p: {
   offer: string;
   currency: Currency;
   destination: Destination;
+  objective?: string;
   ctas: readonly CtaType[];
   locationCount: number;
   fallbackName: string;
@@ -56,7 +57,7 @@ export async function generateCopy(p: {
   const prompt = copyPrompt(p);
   for (let attempt = 0; attempt < 2; attempt++) {
     try {
-      const raw = JSON.parse(await groqJson(prompt, { maxTokens: 2048, temperature: 0.7 })) as Record<string, unknown>;
+      const raw = JSON.parse(await groqJson(prompt, { maxTokens: 6000, temperature: 0.7 })) as Record<string, unknown>;
       const copy = sanitizeCopy(raw, p);
       if (copy) return { copy, fallback: false };
     } catch {
@@ -67,11 +68,11 @@ export async function generateCopy(p: {
 }
 
 /** Carousel card headlines/descriptions. Retries once; throws if nothing usable. */
-export async function generateCards(p: { businessName: string; about: string; offer: string; destination: Destination; count: number }): Promise<CardIdea[]> {
+export async function generateCards(p: { businessName: string; about: string; offer: string; destination: Destination; objective?: string; count: number }): Promise<CardIdea[]> {
   const prompt = cardsPrompt(p);
   for (let attempt = 0; attempt < 2; attempt++) {
     try {
-      const raw = JSON.parse(await groqJson(prompt, { maxTokens: 1500, temperature: 0.7 })) as { cards?: unknown };
+      const raw = JSON.parse(await groqJson(prompt, { maxTokens: 4000, temperature: 0.7 })) as { cards?: unknown };
       const cards = sanitizeCards(raw.cards, p.count);
       if (cards.length >= Math.min(2, p.count)) return cards;
     } catch {

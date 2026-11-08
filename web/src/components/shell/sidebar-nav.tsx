@@ -29,13 +29,15 @@ export function NavLinks({ accountType = "agency", path = "" }: { accountType?: 
             key={href}
             href={href}
             aria-current={active ? "page" : undefined}
+            aria-label={label}
+            title={label}
             className={cn(
-              "flex items-center gap-3 rounded-pill px-4 py-2.5 text-[15px] font-bold transition-colors",
+              "flex items-center gap-3 rounded-pill px-4 py-2.5 text-[15px] font-bold transition-colors md:group-data-[collapsed=true]/sidebar:justify-center md:group-data-[collapsed=true]/sidebar:px-0",
               active ? "bg-chartreuse text-ink" : "text-paper/75 hover:bg-paper/10 hover:text-paper",
             )}
           >
             <Icon aria-hidden className="size-[18px]" strokeWidth={1.75} />
-            <span className="hidden sm:inline">{label}</span>
+            <span className="hidden sm:inline md:group-data-[collapsed=true]/sidebar:hidden">{label}</span>
           </Link>
         );
       })}

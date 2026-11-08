@@ -4,15 +4,17 @@ import { z } from "zod";
 import { requireUser } from "@/features/auth/dal";
 import { getClient } from "@/features/clients/data";
 import { aiConfigured } from "@/lib/env";
-import { CTA_FOR_LEAD_FORM, CTA_FOR_WEBSITE, CURRENCIES, CURRENCY_TO_COUNTRY } from "../engine/presets.ts";
+import { CTA_FOR, CURRENCIES, CURRENCY_TO_COUNTRY, DESTINATIONS } from "../engine/presets.ts";
 import { REACH_SCOPES, expectedPins, type CardIdea, type CopySuggestion, type Pin } from "./prompts.ts";
 import { generateCards, generateCopy, resolveLocations } from "./resolver.ts";
 
 const text = (max: number) => z.string().trim().max(max);
+const OBJECTIVES_LIVE = ["OUTCOME_LEADS", "OUTCOME_TRAFFIC", "OUTCOME_AWARENESS", "OUTCOME_ENGAGEMENT", "OUTCOME_SALES"] as const;
 
 const SetupInput = z.object({
   clientId: z.number().int().positive(),
-  objective: z.enum(["OUTCOME_LEADS", "OUTCOME_TRAFFIC"]),
+  objective: z.enum(OBJECTIVES_LIVE),
+  destination: z.enum(DESTINATIONS),
   businessName: text(120).min(1, "Add the business name."),
   website: z.union([z.literal(""), z.url("Enter a full website address, starting with https://")]),
   about: text(2000).min(20, "Describe the business in a sentence or two."),
@@ -37,13 +39,13 @@ export async function generateSetupAction(input: SetupInput): Promise<SetupResul
     return { ok: false, error: "Please fix the highlighted fields.", fieldErrors };
   }
   const d = parsed.data;
-  if (d.objective === "OUTCOME_TRAFFIC" && !d.website) {
-    return { ok: false, error: "Traffic campaigns need a website.", fieldErrors: { website: "Add the website people should visit." } };
+  if (d.destination === "website" && !d.website) {
+    return { ok: false, error: "This goal sends people to a website.", fieldErrors: { website: "Add the website page people should visit." } };
   }
   if (!(await getClient(user.id, d.clientId))) return { ok: false, error: "Client not found." };
   if (!aiConfigured()) return { ok: false, error: "AI setup isn't configured on this server yet." };
 
-  const destination = d.objective === "OUTCOME_TRAFFIC" ? "website" : "lead_form";
+  const destination = d.destination;
   try {
     const [pins, { copy, fallback }] = await Promise.all([
       resolveLocations({
@@ -59,9 +61,10 @@ export async function generateSetupAction(input: SetupInput): Promise<SetupResul
         offer: d.offer,
         currency: d.currency,
         destination,
-        ctas: destination === "website" ? CTA_FOR_WEBSITE : CTA_FOR_LEAD_FORM,
+        objective: d.objective,
+        ctas: CTA_FOR[destination],
         locationCount: expectedPins(d.cities.length, d.scope),
-        fallbackName: `${d.businessName} — ${destination === "website" ? "Traffic" : "Leads"}`.slice(0, 40),
+        fallbackName: `${d.businessName} — ${d.objective.replace("OUTCOME_", "").toLowerCase()}`.slice(0, 40),
       }),
     ]);
     return { ok: true, pins, copy, usedFallback: fallback };
@@ -106,7 +109,8 @@ const CardsInput = z.object({
   businessName: text(120),
   about: text(2000),
   offer: text(2000),
-  destination: z.enum(["website", "lead_form"]),
+  destination: z.enum(DESTINATIONS),
+  objective: z.enum(OBJECTIVES_LIVE).optional(),
   count: z.number().int().min(2).max(10),
 });
 

@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/surface";
 import { cn } from "@/lib/cn";
 import { LEVELS, SECTION_ORDER, initialDraft, sectionComplete, type Draft, type SectionId } from "./blueprint";
+import { AdPreview } from "./ad-preview";
 import { Summary } from "./summary";
 import { AudienceSection } from "./audience-section";
 import { CreativeSection, NameBudgetSection, PlacementsSection, ReviewSection } from "./sections";
@@ -18,6 +19,10 @@ export type ClientOption = {
   adAccountName: string | null;
   pageName: string | null;
   instagramUsername: string | null;
+  /** Connected Pixel (needed for Sales / website leads). */
+  hasPixel: boolean;
+  pixelName: string | null;
+  hasInstagram: boolean;
 };
 
 export type SectionProps = {
@@ -38,7 +43,7 @@ export function CreateCampaign({ clients, isAgency }: { clients: ClientOption[];
   const props: SectionProps = { draft, update, clients, goTo: setActive };
 
   return (
-    <div className="grid grid-cols-[minmax(0,1fr)] gap-6 lg:grid-cols-[220px_minmax(0,1fr)] xl:grid-cols-[220px_minmax(0,1fr)_300px]">
+    <div className="grid grid-cols-[minmax(0,1fr)] gap-6 lg:grid-cols-[220px_minmax(0,1fr)] xl:grid-cols-[220px_minmax(0,1fr)_340px]">
       {/* Meta-style structure rail */}
       <nav aria-label="Campaign steps" className="min-w-0 lg:sticky lg:top-10 lg:self-start">
         <ol className="flex gap-4 overflow-x-auto pb-2 lg:flex-col lg:gap-5 lg:overflow-visible lg:pb-0">
@@ -91,6 +96,14 @@ export function CreateCampaign({ clients, isAgency }: { clients: ClientOption[];
           {active === "review" && <ReviewSection {...props} />}
         </Card>
 
+        {/* No right panel below xl → show the preview under the form. */}
+        {active === "creative" && (
+          <Card className="xl:hidden">
+            <h2 className="mb-3 text-[17px] font-extrabold">Ad preview</h2>
+            <AdPreview draft={draft} client={clients.find((c) => c.id === draft.clientId)} />
+          </Card>
+        )}
+
         <div className="flex items-center justify-between gap-3">
           {prev ? (
             <Button type="button" variant="ghost" onClick={() => setActive(prev)}>
@@ -107,8 +120,15 @@ export function CreateCampaign({ clients, isAgency }: { clients: ClientOption[];
         </div>
       </div>
 
-      <aside className="hidden xl:block xl:sticky xl:top-10 xl:self-start" aria-label="Campaign summary">
-        <Summary draft={draft} clients={clients} />
+      <aside className="hidden xl:block xl:sticky xl:top-10 xl:self-start" aria-label={active === "creative" ? "Ad preview" : "Campaign summary"}>
+        {active === "creative" ? (
+          <div className="rounded-card bg-paper/60 p-4">
+            <h2 className="mb-3 text-[15px] font-extrabold">Ad preview</h2>
+            <AdPreview draft={draft} client={clients.find((c) => c.id === draft.clientId)} />
+          </div>
+        ) : (
+          <Summary draft={draft} clients={clients} />
+        )}
       </aside>
     </div>
   );

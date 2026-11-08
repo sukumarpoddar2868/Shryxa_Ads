@@ -26,6 +26,20 @@ const fixtures = JSON.parse(readFileSync(new URL("./__fixtures__/python-parity.j
   invalid: { name: string; input: unknown }[];
 };
 
+/**
+ * Intentional deviations from the Python launcher (Meta API changes since):
+ *   object_story_spec.instagram_actor_id → instagram_user_id (Graph v22+).
+ */
+function withApiUpdates<T>(v: T): T {
+  if (Array.isArray(v)) return v.map(withApiUpdates) as T;
+  if (v && typeof v === "object") {
+    return Object.fromEntries(
+      Object.entries(v).map(([k, x]) => [k === "instagram_actor_id" ? "instagram_user_id" : k, withApiUpdates(x)]),
+    ) as T;
+  }
+  return v;
+}
+
 /** Python build_meta_yaml kwargs → TS RenderInput. */
 function toRenderInput(k: Record<string, unknown>): RenderInput {
   const s = (key: string) => (k[key] as string | undefined) ?? undefined;
@@ -57,13 +71,13 @@ for (const c of fixtures.valid) {
     }
     const spec = validateSpec(c.input);
     const ops = buildAll(spec);
-    assert.deepEqual(ops, c.operations, "operations");
+    assert.deepEqual(ops, withApiUpdates(c.operations), "operations");
 
     const run = runMock(spec, ops);
     assert.equal(run.ids.lead_form ?? null, c.mock.form_id, "mock lead form id");
     assert.deepEqual(
       run.steps.filter((s) => s.step > 0).map(({ step, endpoint, payload, id }) => ({ step, endpoint, payload, id })),
-      c.mock.steps,
+      withApiUpdates(c.mock.steps),
       "mock steps",
     );
   });
@@ -129,6 +143,85 @@ test("video ads use video_data with a cover image", () => {
     call_to_action: { type: "GET_QUOTE", value: { link: "https://kapoorca.in/itr" } },
   });
   assert.match(String(buildAll(spec)[2].payload.name), / — video /);
+});
+
+test("custom name, lifetime budget and Advantage+ audience", () => {
+  const c = fixtures.valid.find((x) => x.name === "render_website_inr_epicenters")!;
+  const spec = validateSpec(
+    renderSpec({ ...toRenderInput(c.render_kwargs!), campaignName: "Diwali ITR push", budgetType: "lifetime", dailyBudget: 9000, endDate: "2026-12-31", advantageAudience: true }),
+  );
+  const [camp, adset] = buildAll(spec);
+  assert.equal(camp.payload.name, "Diwali ITR push");
+  assert.equal(camp.payload.spend_cap, 900000);
+  assert.equal(adset.payload.lifetime_budget, 900000);
+  assert.equal(adset.payload.daily_budget, undefined);
+  assert.deepEqual((adset.payload.targeting as Record<string, unknown>).targeting_automation, { advantage_audience: 1 });
+  assert.match(String(adset.payload.name), /^Diwali ITR push — Ad set STAMP$/);
+});
+
+test("routing per objective × destination matches Meta's documented setups", () => {
+  const c = fixtures.valid.find((x) => x.name === "render_website_inr_epicenters")!;
+  const base = { ...toRenderInput(c.render_kwargs!), leadForm: null };
+  const build = (extra: Partial<RenderInput>) => {
+    const ops = buildAll(validateSpec(renderSpec({ ...base, ...extra })));
+    const adset = ops[1].payload as Record<string, unknown>;
+    const ld = ((ops[2].payload.creative as Record<string, unknown>).object_story_spec as Record<string, Record<string, unknown>>).link_data;
+    return { ops, adset, ld, objective: ops[0].payload.objective };
+  };
+
+  const wa = build({ objective: "OUTCOME_LEADS", destination: "whatsapp", whatsappNumber: "+919876543210" });
+  assert.equal(wa.adset.destination_type, "WHATSAPP");
+  assert.equal(wa.adset.optimization_goal, "CONVERSATIONS");
+  assert.deepEqual(wa.adset.promoted_object, { page_id: "1033691806503292", whatsapp_phone_number: "+919876543210" });
+  assert.equal(wa.ld.link, "https://api.whatsapp.com/send");
+  assert.deepEqual(wa.ld.call_to_action, { type: "WHATSAPP_MESSAGE", value: { app_destination: "WHATSAPP" } });
+  assert.doesNotThrow(() => checkPilotGuard(wa.ops, false));
+
+  const call = build({ objective: "OUTCOME_LEADS", destination: "call", phoneNumber: "+91 98765 43210" });
+  assert.equal(call.adset.destination_type, "PHONE_CALL");
+  assert.equal(call.adset.optimization_goal, "QUALITY_CALL");
+  assert.equal(call.adset.promoted_object, undefined);
+  assert.deepEqual((call.adset.targeting as Record<string, unknown>).device_platforms, ["mobile"]);
+  assert.deepEqual(call.ld.call_to_action, { type: "CALL_NOW", value: { link: "tel:+919876543210" } });
+  assert.doesNotThrow(() => checkPilotGuard(call.ops, false));
+
+  const msg = build({ objective: "OUTCOME_ENGAGEMENT", destination: "messenger" });
+  assert.deepEqual([msg.adset.destination_type, msg.adset.optimization_goal], ["MESSENGER", "CONVERSATIONS"]);
+  assert.deepEqual(msg.ld.call_to_action, { type: "MESSAGE_PAGE", value: { app_destination: "MESSENGER" } });
+
+  const ig = build({ objective: "OUTCOME_ENGAGEMENT", destination: "instagram_dm" });
+  assert.deepEqual(ig.ld.call_to_action, { type: "INSTAGRAM_MESSAGE", value: { app_destination: "INSTAGRAM_DIRECT" } });
+
+  const aw = build({ objective: "OUTCOME_AWARENESS", destination: "none", frequencyCap: 2, landingPageUrl: null, ctaType: "LEARN_MORE" });
+  assert.equal(aw.adset.optimization_goal, "REACH");
+  assert.equal("destination_type" in aw.adset, false);
+  assert.deepEqual(aw.adset.frequency_control_specs, [{ event: "IMPRESSIONS", interval_days: 7, max_frequency: 2 }]);
+
+  const sales = build({ objective: "OUTCOME_SALES", destination: "website", pixel: { pixelId: "px1", event: "PURCHASE" } });
+  assert.equal(sales.adset.optimization_goal, "OFFSITE_CONVERSIONS");
+  assert.deepEqual(sales.adset.promoted_object, { pixel_id: "px1", custom_event_type: "PURCHASE" });
+  assert.throws(() => checkPilotGuard(sales.ops, false), PilotGuardError);
+  assert.doesNotThrow(() => checkPilotGuard(sales.ops, true));
+  assert.throws(() => renderSpec({ ...base, objective: "OUTCOME_SALES", destination: "website" }), /Pixel/);
+});
+
+test("WhatsApp greeting: pre-filled message or quick questions", () => {
+  const c = fixtures.valid.find((x) => x.name === "render_website_inr_epicenters")!;
+  const base = { ...toRenderInput(c.render_kwargs!), objective: "OUTCOME_LEADS", destination: "whatsapp" as const, whatsappNumber: "+919876543210" };
+  const ld = (extra: Partial<RenderInput>) =>
+    ((buildAll(validateSpec(renderSpec({ ...base, ...extra })))[2].payload.creative as Record<string, unknown>).object_story_spec as Record<string, Record<string, unknown>>).link_data;
+  const prefill = JSON.parse(String(ld({ whatsappChat: { greeting: "Hi! Thanks for reaching out.", prefill: "I want a quote for ITR filing." } }).page_welcome_message));
+  assert.deepEqual(prefill, {
+    type: "VISUAL_EDITOR",
+    version: 2,
+    landing_screen_type: "welcome_message",
+    media_type: "text",
+    text_format: { customer_action_type: "autofill_message", message: { text: "Hi! Thanks for reaching out.", autofill_message: { content: "I want a quote for ITR filing." } } },
+  });
+  const qs = JSON.parse(String(ld({ whatsappChat: { greeting: "Hello!", questions: ["Price?", " ", "Timings?"] } }).page_welcome_message));
+  assert.equal(qs.text_format.customer_action_type, "ice_breakers");
+  assert.deepEqual(qs.text_format.message.ice_breakers, [{ title: "Price?" }, { title: "Timings?" }]);
+  assert.equal(ld({}).page_welcome_message, undefined);
 });
 
 test("pilot guard: blocks website leads, allows instant form", () => {

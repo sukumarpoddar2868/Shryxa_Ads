@@ -114,6 +114,13 @@ export type CopySuggestion = {
   audience_why: string;
   /** Ideas for carousel cards (used if the user picks Carousel). */
   carousel_cards: CardIdea[];
+  /** Instant form only: short qualifying questions + thank-you text. */
+  lead_questions: string[];
+  thank_you_message: string;
+  /** WhatsApp ads: business greeting, customer's pre-filled message, quick questions. */
+  whatsapp_greeting: string;
+  whatsapp_prefill: string;
+  whatsapp_questions: string[];
 };
 
 export type CardIdea = { headline: string; description: string };
@@ -134,13 +141,13 @@ export function sanitizeCards(raw: unknown, max = 10): CardIdea[] {
 }
 
 /** Carousel cards on demand (Creative → "Write cards with AI"). */
-export function cardsPrompt(p: { businessName: string; about: string; offer: string; destination: Destination; count: number }): string {
+export function cardsPrompt(p: { businessName: string; about: string; offer: string; destination: Destination; objective?: string; count: number }): string {
   return `Write ${p.count} carousel cards for a Meta (Facebook + Instagram) ad.
 
 Business: ${p.businessName || "(not provided)"}
 About: ${p.about || "(not provided)"}
 Offer: ${p.offer || "(not provided)"}
-Goal: ${GOAL_GUIDE[p.destination]}
+Goal: ${goalGuide(p.destination, p.objective)}
 
 Each card is one swipeable panel with its own image. Make every card a DIFFERENT angle:
 a specific service or product, a benefit, a proof point (experience, reviews implied by the text),
@@ -173,7 +180,40 @@ const GOAL_GUIDE: Record<Destination, string> = {
   • Tell them what they will find on the page (prices, menu, slots, catalogue).
   • Do not promise a call-back or a form — they are going to a web page.
   • Headline = the clearest reason to click.`,
+  whatsapp: `CHATS on WhatsApp — tapping opens a WhatsApp chat with the business.
+  • Invite a quick question: "Message us on WhatsApp for prices / availability / a free quote".
+  • Promise a fast, personal reply only if plausible ("we reply within minutes").
+  • Headline = what they get by messaging (quote, slot, menu, offer).`,
+  messenger: `CHATS on Messenger — tapping opens a Messenger chat with the Page.
+  • Invite a quick question or booking by message; keep it conversational.
+  • Headline = what they get by messaging.`,
+  instagram_dm: `CHATS in Instagram Direct — tapping opens a DM with the business's Instagram.
+  • Casual, visual tone; invite them to DM for details, prices or booking.
+  • Headline = what they get by sending a DM.`,
+  call: `PHONE CALLS — tapping calls the business directly.
+  • Give a reason to call now (free consultation, instant quote, book today).
+  • Mention hours/availability only if given. Keep it short and local.
+  • Headline = why call, e.g. "Call for a free ITR check".`,
+  none: `AWARENESS — show the business to as many nearby people as possible.
+  • Make the business memorable: what it is, where, and one distinctive reason to remember it.
+  • No hard sell, no form or call-back promise.
+  • Headline = the business's key promise or offer.`,
 };
+
+const SALES_GUIDE = `SALES on the business website (online purchase).
+  • Lead with the product benefit and the price/offer; make buying feel easy and safe.
+  • Mention delivery, returns or payment options only if given.
+  • Headline = product + offer.`;
+const WEBSITE_LEADS_GUIDE = `LEADS via a form on the business website.
+  • Make filling the form feel worth it: what they get (quote, consultation, callback).
+  • Headline = the outcome or the offer.`;
+
+/** Brief for the AI given the campaign objective and destination. */
+export function goalGuide(destination: Destination, objective?: string): string {
+  if (destination === "website" && objective === "OUTCOME_SALES") return SALES_GUIDE;
+  if (destination === "website" && objective === "OUTCOME_LEADS") return WEBSITE_LEADS_GUIDE;
+  return GOAL_GUIDE[destination];
+}
 
 export function copyPrompt(p: {
   businessName: string;
@@ -181,6 +221,7 @@ export function copyPrompt(p: {
   offer: string;
   currency: Currency;
   destination: Destination;
+  objective?: string;
   ctas: readonly CtaType[];
   locationCount: number;
 }): string {
@@ -195,7 +236,7 @@ Product / offer for this campaign:
   ${p.offer || "(not provided)"}
 
 Currency: ${p.currency}
-Campaign goal: ${GOAL_GUIDE[p.destination]}
+Campaign goal: ${goalGuide(p.destination, p.objective)}
 Target areas: ${p.locationCount} area(s)
 
 STRICT RULES:
@@ -215,6 +256,9 @@ STRICT RULES:
     mentions iPhone/Apple or is clearly premium / luxury / high-ticket (where iPhone users are the likely buyers);
     "android" ONLY if Android is mentioned. When unsure, "all" — never narrow the audience without a clear reason.
   • audience_why: one short sentence explaining the age, gender and phone choice.
+  • lead_questions: ${p.destination === "lead_form" ? "1–3 short qualifying questions for the instant form (MAXIMUM 80 characters each) that help the business prioritise leads, e.g. \"Salaried or self-employed?\". Never ask for name, phone, email or city — those are pre-filled." : "[] (empty — not a lead form)."}
+  • thank_you_message: ${p.destination === "lead_form" ? "one friendly sentence shown after the form is sent, saying what happens next (MAXIMUM 120 characters)." : "\"\""}
+  • whatsapp_greeting / whatsapp_prefill / whatsapp_questions: ${p.destination === "whatsapp" ? "the WhatsApp chat that opens after tapping. whatsapp_greeting = the business's friendly first message (MAXIMUM 200 characters, mention the business name). whatsapp_prefill = what the CUSTOMER sends, written in first person about this offer (MAXIMUM 120 characters, e.g. \"Hi! I'd like a quote for ITR filing.\"). whatsapp_questions = 3 short tappable questions a customer might ask (MAXIMUM 60 characters each)." : "empty strings / empty list (not a WhatsApp ad)."}
   • carousel_cards: 4 cards for a carousel version of this ad — each a different service, benefit or
     proof point; headline MAXIMUM 32 characters, description MAXIMUM 50 characters.
 
@@ -235,7 +279,12 @@ OUTPUT RULES:
   "gender": "any",
   "device_os": "all",
   "audience_why": "...",
-  "carousel_cards": [{ "headline": "...", "description": "..." }]
+  "carousel_cards": [{ "headline": "...", "description": "..." }],
+  "lead_questions": ["..."],
+  "thank_you_message": "...",
+  "whatsapp_greeting": "...",
+  "whatsapp_prefill": "...",
+  "whatsapp_questions": ["..."]
 }`;
 }
 
@@ -290,6 +339,14 @@ export function sanitizeCopy(
     device_os: (DEVICE_OS as readonly string[]).includes(device) ? (device as CopySuggestion["device_os"]) : "all",
     audience_why: squash(raw.audience_why, 200),
     carousel_cards: sanitizeCards(raw.carousel_cards, 10),
+    lead_questions: (Array.isArray(raw.lead_questions) ? raw.lead_questions : [])
+      .map((q) => squash(q, 80))
+      .filter((q) => q && !/\b(name|phone|e-?mail|city)\b/i.test(q))
+      .slice(0, 3),
+    thank_you_message: squash(raw.thank_you_message, 160),
+    whatsapp_greeting: squash(raw.whatsapp_greeting, 300),
+    whatsapp_prefill: squash(raw.whatsapp_prefill, 200),
+    whatsapp_questions: (Array.isArray(raw.whatsapp_questions) ? raw.whatsapp_questions : []).map((q) => squash(q, 80)).filter(Boolean).slice(0, 4),
   };
 }
 
@@ -317,5 +374,10 @@ export function fallbackCopy(p: {
     device_os: "all",
     audience_why: "",
     carousel_cards: [],
+    lead_questions: [],
+    thank_you_message: "",
+    whatsapp_greeting: `Hi! Thanks for contacting ${p.businessName || "us"}. How can we help?`.slice(0, 300),
+    whatsapp_prefill: "Hi! I'd like to know more about your offer.",
+    whatsapp_questions: [],
   };
 }

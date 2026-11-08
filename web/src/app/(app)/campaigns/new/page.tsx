@@ -18,6 +18,9 @@ export default async function NewCampaignPage() {
       adAccountName: c.ad_account_name,
       pageName: c.page_name,
       instagramUsername: c.instagram_username,
+      hasPixel: Boolean(c.pixel_id),
+      pixelName: c.pixel_name,
+      hasInstagram: Boolean(c.instagram_actor_id),
     }));
 
   return (

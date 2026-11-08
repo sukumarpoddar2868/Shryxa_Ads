@@ -76,8 +76,19 @@ export type GenderPref = keyof typeof GENDER_TO_META;
 
 /* ---------- Destination / CTA / bidding ---------- */
 
-export const DESTINATIONS = ["website", "lead_form"] as const;
+/**
+ * Where people go after tapping. "none" = Awareness (no conversion location).
+ * website = Traffic, or Pixel-tracked conversions under Leads/Sales.
+ */
+export const DESTINATIONS = ["website", "lead_form", "whatsapp", "call", "messenger", "instagram_dm", "none"] as const;
 export type Destination = (typeof DESTINATIONS)[number];
+
+/** Pixel events offered for website conversions. */
+export const CONVERSION_EVENTS = {
+  OUTCOME_SALES: ["PURCHASE", "INITIATED_CHECKOUT", "ADD_TO_CART"],
+  OUTCOME_LEADS: ["LEAD", "COMPLETE_REGISTRATION", "CONTACT", "SCHEDULE"],
+} as const;
+export type ConversionEvent = (typeof CONVERSION_EVENTS)[keyof typeof CONVERSION_EVENTS][number];
 
 export const CTA_FOR_WEBSITE: CtaType[] = [
   "SHOP_NOW", "LEARN_MORE", "SIGN_UP", "DOWNLOAD", "GET_OFFER",
@@ -87,6 +98,17 @@ export const CTA_FOR_LEAD_FORM: CtaType[] = [
   "GET_QUOTE", "SIGN_UP", "LEARN_MORE", "CONTACT_US", "APPLY_NOW",
   "GET_OFFER", "SUBSCRIBE", "DOWNLOAD",
 ];
+
+/** Allowed buttons per destination (first = default). */
+export const CTA_FOR: Record<Destination, CtaType[]> = {
+  website: CTA_FOR_WEBSITE,
+  lead_form: CTA_FOR_LEAD_FORM,
+  whatsapp: ["WHATSAPP_MESSAGE"],
+  call: ["CALL_NOW"],
+  messenger: ["MESSAGE_PAGE"],
+  instagram_dm: ["INSTAGRAM_MESSAGE"],
+  none: ["LEARN_MORE", "SHOP_NOW", "CONTACT_US", "GET_OFFER", "BOOK_TRAVEL"],
+};
 
 export const BIDDING_OPTIONS = [
   { label: "Lowest cost (auto)", value: "LOWEST_COST_WITHOUT_CAP" },

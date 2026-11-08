@@ -29,6 +29,7 @@ export async function launchCampaign(
   clientId: number,
   input: LaunchInput,
   mode: AdapterMode,
+  options: { conversionTrackingVerified?: boolean } = {},
 ): Promise<LaunchOutcome> {
   const client = await getClient(userId, clientId);
   if (!client) return { ok: false, error: "Client not found." };
@@ -62,7 +63,7 @@ export async function launchCampaign(
 
   if (!input.imageHash && !input.video && !input.carousel?.cards.length) return { ok: false, error: "Upload your image or video first.", spec };
   try {
-    checkPilotGuard(ops, metaEnv().CONVERSION_TRACKING_VERIFIED);
+    checkPilotGuard(ops, metaEnv().CONVERSION_TRACKING_VERIFIED || Boolean(options.conversionTrackingVerified));
   } catch (e) {
     if (e instanceof PilotGuardError) return { ok: false, error: e.message, spec };
     throw e;

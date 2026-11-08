@@ -56,7 +56,7 @@ export const CampaignInput = z
 export const OPTIMIZATION_GOALS = [
   "LINK_CLICKS", "IMPRESSIONS", "REACH", "LANDING_PAGE_VIEWS",
   "OFFSITE_CONVERSIONS", "VALUE", "THRUPLAY", "LEAD_GENERATION",
-  "APP_INSTALLS",
+  "APP_INSTALLS", "CONVERSATIONS", "QUALITY_CALL", "QUALITY_LEAD",
 ] as const;
 export const BILLING_EVENTS = ["IMPRESSIONS", "LINK_CLICKS", "THRUPLAY", "APP_INSTALLS"] as const;
 export const BID_STRATEGIES = [
@@ -66,7 +66,7 @@ export const BID_STRATEGIES = [
 export const PLATFORMS = ["facebook", "instagram", "messenger", "audience_network"] as const;
 export const DESTINATION_TYPES = [
   "WEBSITE", "APP", "MESSENGER", "INSTAGRAM_DIRECT",
-  "WHATSAPP", "ON_AD", "ON_POST",
+  "WHATSAPP", "ON_AD", "ON_POST", "PHONE_CALL",
 ] as const;
 
 /** A pin with a radius → targeting.geo_locations.custom_locations[]. */
@@ -126,6 +126,7 @@ export const PromotedObject = z.object({
   application_id: z.string().nullish(),
   object_store_url: z.string().nullish(),
   page_id: z.string().nullish(),
+  whatsapp_phone_number: z.string().nullish(), // click-to-WhatsApp (optional)
 });
 
 const isoDateTime = z
@@ -153,6 +154,10 @@ export const AdSetInput = z
     destination_type: z.enum(DESTINATION_TYPES).default("WEBSITE"),
     promoted_object: PromotedObject.nullish(),
     targeting: TargetingInput,
+    // Awareness/Reach: cap how often one person sees the ad.
+    frequency_control_specs: z
+      .array(z.object({ event: z.literal("IMPRESSIONS"), interval_days: z.number().int().min(1).max(90), max_frequency: z.number().int().min(1).max(90) }))
+      .nullish(),
     // EU Digital Services Act — required for EU placements.
     dsa_payor: z.string().nullish(),
     dsa_beneficiary: z.string().nullish(),
@@ -178,6 +183,8 @@ export const CTA_TYPES = [
   "SHOP_NOW", "LEARN_MORE", "SIGN_UP", "BOOK_TRAVEL", "DOWNLOAD",
   "GET_OFFER", "CONTACT_US", "APPLY_NOW", "SUBSCRIBE", "DONATE_NOW",
   "ORDER_NOW", "GET_QUOTE", "BUY_NOW", "INSTALL_APP",
+  // Messaging / call destinations
+  "WHATSAPP_MESSAGE", "MESSAGE_PAGE", "INSTAGRAM_MESSAGE", "CALL_NOW",
 ] as const;
 export type CtaType = (typeof CTA_TYPES)[number];
 
@@ -186,6 +193,8 @@ export const CallToAction = z.object({
   value_link: z.string().nullish(), // usually equal to link_data.link
   // Lead-form ads (destination ON_AD): a real form id from /{page}/leadgen_forms.
   value_lead_gen_form_id: z.string().nullish(),
+  // Messaging ads: "WHATSAPP" | "MESSENGER" | "INSTAGRAM_DIRECT" → value.app_destination.
+  value_app_destination: z.enum(["WHATSAPP", "MESSENGER", "INSTAGRAM_DIRECT"]).nullish(),
 });
 
 /** One carousel card → link_data.child_attachments[]. */
@@ -211,6 +220,8 @@ export const LinkData = z.object({
   child_attachments: z.array(CarouselCard).min(2).max(10).nullish(),
   multi_share_optimized: z.boolean().nullish(), // let Meta order cards by performance
   multi_share_end_card: z.boolean().nullish(), // extra end card with the Page profile
+  // Messaging ads: greeting + pre-filled message / quick questions (JSON string).
+  page_welcome_message: z.string().nullish(),
 }).superRefine((ld, ctx) => {
   if (!ld.image_hash && !ld.child_attachments?.length) {
     ctx.addIssue({ code: "custom", message: "image_hash is required (or carousel cards)", path: ["image_hash"] });
@@ -227,6 +238,7 @@ export const VideoData = z.object({
   title: z.string(), // headline
   link_description: z.string().nullish(),
   link: z.string(), // where the CTA goes (website ads)
+  page_welcome_message: z.string().nullish(),
   call_to_action: CallToAction,
 }).superRefine((v, ctx) => {
   if (!v.image_hash && !v.image_url) ctx.addIssue({ code: "custom", message: "video needs a cover image", path: ["image_hash"] });

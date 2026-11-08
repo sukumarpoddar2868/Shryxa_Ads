@@ -3,7 +3,7 @@
  * state the page holds. Each module is built out deeply later; `planned`
  * lists what each one will grow into.
  */
-import { CURRENCY, type Currency, type Destination } from "../engine/presets.ts";
+import { CTA_FOR, CURRENCY, type ConversionEvent, type Currency, type Destination } from "../engine/presets.ts";
 import type { CtaType } from "../engine/schema.ts";
 import type { ReachScope } from "../ai/prompts.ts";
 import type { MediaRef } from "../media/rules";
@@ -32,16 +32,26 @@ export const OBJECTIVE_OPTIONS: {
   available: boolean;
   note?: string;
 }[] = [
-  { id: "OUTCOME_LEADS", label: "Leads", blurb: "Collect enquiries with an instant form, WhatsApp or calls.", available: true },
+  { id: "OUTCOME_LEADS", label: "Leads", blurb: "Collect enquiries — instant form, WhatsApp chats or phone calls.", available: true },
   { id: "OUTCOME_TRAFFIC", label: "Traffic", blurb: "Send people to your website or landing page.", available: true },
-  { id: "OUTCOME_AWARENESS", label: "Awareness", blurb: "Show your ad to as many nearby people as possible.", available: false, note: "Later" },
-  { id: "OUTCOME_ENGAGEMENT", label: "Engagement", blurb: "Get messages, video views or Page likes.", available: false, note: "Later" },
-  { id: "OUTCOME_SALES", label: "Sales", blurb: "Find people likely to buy online.", available: false, note: "Needs Pixel" },
+  { id: "OUTCOME_AWARENESS", label: "Awareness", blurb: "Show your ad to as many nearby people as possible — great for openings and new shops.", available: true },
+  { id: "OUTCOME_ENGAGEMENT", label: "Engagement", blurb: "Get people messaging you on WhatsApp, Messenger or Instagram.", available: true },
+  { id: "OUTCOME_SALES", label: "Sales", blurb: "Find people likely to buy on your website. Needs a Meta Pixel.", available: true },
 ];
 
 export type AdFormat = "single" | "carousel" | "video";
 /** One carousel card (1:1 image). */
-export type DraftCard = { id: string; headline: string; description: string; link: string; image?: MediaRef };
+export type DraftCard = { id: string; headline: string; description: string; link: string; image?: MediaRef; /** Per-item WhatsApp message ("" = default template). */ waMessage?: string };
+
+/** WhatsApp setup: greeting + what the customer sends; per-item links for carousels. */
+export type DraftWhatsApp = {
+  greeting: string;
+  style: "prefill" | "questions";
+  prefill: string;
+  questions: string[];
+  /** Carousel only: each card opens WhatsApp with its own message + item picture (runs as Traffic). */
+  perItem: boolean;
+};
 
 /** Uploaded media for single-image (feed/portrait/story) and video ads. */
 export type DraftMedia = { feed?: MediaRef; portrait?: MediaRef; story?: MediaRef; video?: MediaRef };
@@ -58,26 +68,108 @@ export function mediaReady(d: Draft): boolean {
   return Boolean(d.ad.media.feed);
 }
 
+/** Instant form (destination lead_form). Contact fields are pre-filled by Meta. */
+export type DraftLeadForm = { name: string; privacyUrl: string; fields: ContactField[]; questions: string[]; thankYou: string };
+export const CONTACT_FIELDS = {
+  FULL_NAME: "Full name",
+  PHONE_NUMBER: "Phone number",
+  EMAIL: "Email",
+  CITY: "City",
+  POST_CODE: "PIN / ZIP code",
+  STATE: "State",
+  GENDER: "Gender",
+  DOB: "Date of birth",
+} as const;
+export type ContactField = keyof typeof CONTACT_FIELDS;
+export const MAX_FORM_QUESTIONS = 5;
+export const isHttpsUrl = (u: string) => /^https?:\/\/[^\s/]+\.[^\s]+$/i.test(u.trim());
+
+export function leadFormReady(d: Draft): boolean {
+  if (d.ad.destination !== "lead_form") return true;
+  const f = d.ad.leadForm;
+  return isHttpsUrl(f.privacyUrl) && f.fields.length > 0 && f.questions.every((q) => q.trim().length > 0 && q.length <= 80);
+}
+
+/** Destination-specific details are filled in. */
+export function destinationReady(d: Draft): boolean {
+  switch (d.ad.destination) {
+    case "website":
+      return isHttpsUrl(d.ad.url);
+    case "call":
+      return isPhone(d.ad.phone);
+    case "whatsapp": {
+      const w = d.ad.whatsapp;
+      const textOk = w.style === "prefill" ? w.prefill.trim().length > 0 : w.questions.some((q) => q.trim());
+      if (w.perItem && d.ad.format === "carousel") return isPhone(d.ad.whatsappNumber);
+      return isPhone(d.ad.whatsappNumber) && w.greeting.trim().length > 0 && textOk;
+    }
+    default:
+      return true;
+  }
+}
+
 export type DeviceOs = "all" | "android" | "ios";
 export const DEVICE_LABELS: Record<DeviceOs, string> = { all: "All phones", android: "Android", ios: "iPhone" };
 
 /** A target circle. AI-made pins carry a one-line reason. */
 export type DraftPin = { name: string; lat: number; lng: number; radiusKm: number; why: string };
 
-/** Where people go after tapping the ad, per objective. */
-export type DestinationOption = { id: Destination | "whatsapp" | "call"; label: string; blurb: string; available: boolean; note?: string };
+export type DestinationOption = { id: Destination; label: string; blurb: string; available: boolean; note?: string };
 
-export const DESTINATIONS_FOR: Record<"OUTCOME_LEADS" | "OUTCOME_TRAFFIC", DestinationOption[]> = {
-  OUTCOME_LEADS: [
-    { id: "lead_form", label: "Instant form", blurb: "A quick form inside Facebook/Instagram — name and phone are pre-filled.", available: true },
-    { id: "whatsapp", label: "WhatsApp", blurb: "Opens a WhatsApp chat with the business.", available: false, note: "Soon" },
-    { id: "call", label: "Phone call", blurb: "People tap to call the business.", available: false, note: "Soon" },
-    { id: "website", label: "Website form", blurb: "Leads fill a form on your website.", available: false, note: "Needs Pixel" },
-  ],
-  OUTCOME_TRAFFIC: [{ id: "website", label: "Website", blurb: "Send people to a page on your website.", available: true }],
+/** What the client has connected — some destinations need it. */
+type ClientCaps = { hasPixel?: boolean; hasInstagram?: boolean } | undefined;
+
+/** Destinations per objective, with availability for this client. */
+export function destinationOptions(objective: ObjectiveId, client: ClientCaps): DestinationOption[] {
+  const pixel = client?.hasPixel ? {} : { available: false, note: "Needs Pixel" };
+  const ig = client?.hasInstagram ? {} : { available: false, note: "Needs Instagram" };
+  const opt = (id: Destination, label: string, blurb: string, extra: Partial<DestinationOption> = {}): DestinationOption => ({ id, label, blurb, available: true, ...extra });
+  switch (objective) {
+    case "OUTCOME_LEADS":
+      return [
+        opt("lead_form", "Instant form", "A quick form inside Facebook/Instagram — name and phone are pre-filled."),
+        opt("whatsapp", "WhatsApp", "Opens a WhatsApp chat with the business. The Page must be linked to WhatsApp Business."),
+        opt("call", "Phone call", "People tap to call the business. Mobile only."),
+        opt("website", "Website form", "Leads fill a form on your website — tracked by your Pixel.", pixel),
+      ];
+    case "OUTCOME_TRAFFIC":
+      return [opt("website", "Website", "Send people to a page on your website.")];
+    case "OUTCOME_AWARENESS":
+      return [opt("none", "Reach people nearby", "No click goal — Meta shows the ad to as many people in your areas as possible.")];
+    case "OUTCOME_ENGAGEMENT":
+      return [
+        opt("whatsapp", "WhatsApp", "Start chats on WhatsApp. The Page must be linked to WhatsApp Business."),
+        opt("messenger", "Messenger", "Start chats with your Facebook Page."),
+        opt("instagram_dm", "Instagram Direct", "Start DMs with your Instagram account.", ig),
+      ];
+    case "OUTCOME_SALES":
+      return [opt("website", "Website purchases", "People buy on your website — tracked by your Pixel.", pixel)];
+  }
+}
+
+export const defaultDestination = (objective: ObjectiveId): Destination =>
+  ({ OUTCOME_LEADS: "lead_form", OUTCOME_TRAFFIC: "website", OUTCOME_AWARENESS: "none", OUTCOME_ENGAGEMENT: "whatsapp", OUTCOME_SALES: "website" })[objective] as Destination;
+
+export const DESTINATION_LABELS: Record<Destination, string> = {
+  website: "Website",
+  lead_form: "Instant form",
+  whatsapp: "WhatsApp chat",
+  call: "Phone call",
+  messenger: "Messenger chat",
+  instagram_dm: "Instagram Direct",
+  none: "Reach (no click goal)",
 };
 
-export const defaultDestination = (objective: ObjectiveId): Destination => (objective === "OUTCOME_TRAFFIC" ? "website" : "lead_form");
+/** Default button for a destination (website depends on the goal). */
+export function defaultCta(objective: ObjectiveId, destination: Destination): CtaType {
+  if (destination === "website") return objective === "OUTCOME_SALES" ? "SHOP_NOW" : objective === "OUTCOME_LEADS" ? "SIGN_UP" : "LEARN_MORE";
+  if (destination === "lead_form") return "GET_QUOTE";
+  return CTA_FOR[destination][0];
+}
+
+/** International phone number, digits only with a leading +. */
+export const cleanPhone = (p: string) => p.replace(/[^\d+]/g, "");
+export const isPhone = (p: string) => /^\+[1-9]\d{7,14}$/.test(cleanPhone(p));
 
 export type Draft = {
   objective: ObjectiveId | null;
@@ -93,6 +185,8 @@ export type Draft = {
   };
   /** True once the AI has filled the campaign; every field stays editable. */
   generated: boolean;
+  /** Set after a successful live launch (prevents launching twice). */
+  launched: { campaignId: string; adsManagerUrl: string | null } | null;
   campaign: {
     name: string;
     budgetType: "daily" | "lifetime";
@@ -100,6 +194,8 @@ export type Draft = {
     currency: Currency;
     startDate: string;
     endDate: string;
+    /** Awareness only: max times one person sees the ad per 7 days. */
+    frequencyCap: number;
   };
   audience: {
     locations: DraftPin[];
@@ -122,12 +218,20 @@ export type Draft = {
   ad: {
     destination: Destination;
     url: string;
+    /** Call ads: number with country code. */
+    phone: string;
+    /** WhatsApp ads: optional business number (else the Page's linked one). */
+    whatsappNumber: string;
+    /** Website conversions (Sales / website leads): Pixel event to optimise for. */
+    conversionEvent: ConversionEvent;
+    whatsapp: DraftWhatsApp;
     primaryText: string;
     headline: string;
     description: string;
     cta: CtaType;
     format: AdFormat;
     media: DraftMedia;
+    leadForm: DraftLeadForm;
     /** AI card ideas from Start, used when switching to carousel. */
     cardIdeas: { headline: string; description: string }[];
     carousel: { cards: DraftCard[]; optimizeOrder: boolean; endCard: boolean };
@@ -139,10 +243,11 @@ export const initialDraft = (client: { id: number; name: string } | null): Draft
   clientId: client?.id ?? null,
   setup: { businessName: client?.name ?? "", website: "", about: "", offer: "", cities: [], scope: "hyper-local" },
   generated: false,
-  campaign: { name: "", budgetType: "daily", amount: String(CURRENCY.INR.defaultDailyBudget), currency: "INR", startDate: "", endDate: "" },
+  launched: null,
+  campaign: { name: "", budgetType: "daily", amount: String(CURRENCY.INR.defaultDailyBudget), currency: "INR", startDate: "", endDate: "", frequencyCap: 2 },
   audience: { locations: [], ageMin: 18, ageMax: 65, gender: "any", language: "English", interests: [], mode: "strict", device: "all", why: "" },
   placements: { mode: "advantage", facebook: true, instagram: true },
-  ad: { destination: "lead_form", url: "", primaryText: "", headline: "", description: "", cta: "GET_QUOTE", format: "single", media: {}, cardIdeas: [], carousel: { cards: [], optimizeOrder: true, endCard: false } },
+  ad: { destination: "lead_form", url: "", phone: "", whatsappNumber: "", conversionEvent: "LEAD", whatsapp: { greeting: "", style: "prefill", prefill: "", questions: [], perItem: false }, primaryText: "", headline: "", description: "", cta: "GET_QUOTE", format: "single", media: {}, leadForm: { name: "", privacyUrl: "", fields: ["FULL_NAME", "PHONE_NUMBER", "EMAIL"], questions: [], thankYou: "Thanks! We'll call you back shortly." }, cardIdeas: [], carousel: { cards: [], optimizeOrder: true, endCard: false } },
 });
 
 /** Section is "done" enough to show a tick in the rail. */
@@ -160,10 +265,11 @@ export function sectionComplete(id: SectionId, d: Draft): boolean {
       return (
         d.ad.primaryText.trim() !== "" &&
         mediaReady(d) &&
+        leadFormReady(d) &&
         (d.ad.format === "carousel"
           ? d.ad.carousel.cards.length >= CAROUSEL_MIN && d.ad.carousel.cards.every(cardReady)
           : d.ad.headline.trim() !== "") &&
-        (d.ad.destination !== "website" || /^https?:\/\/\S+\.\S+/.test(d.ad.url))
+        destinationReady(d)
       );
     case "review":
       return false;
@@ -195,10 +301,9 @@ export const PLANNED: Partial<Record<SectionId, string[]>> = {
   creative: [
     "Crop / trim editor for images and video",
     "Rewrite / more variations of the AI copy",
-    "Instant form builder (questions, privacy link, thank-you screen)",
     "WhatsApp, call and Messenger destinations",
     "A/B variants (two images or two headlines)",
     "Live mockups for Feed, Stories and Reels",
   ],
-  review: ["Check with Meta (validate-only) before launch", "Launch paused by default, with readiness checks for the ad account"],
+  review: ["Save drafts and launched campaigns in Shryxa", "Ad-account readiness (payment method, status) before launch"],
 };

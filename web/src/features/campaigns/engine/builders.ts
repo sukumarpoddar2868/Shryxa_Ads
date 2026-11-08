@@ -88,6 +88,20 @@ function buildAssetFeedSpec(ld: LinkData, ctaValue: Record<string, string>): Jso
   return spec;
 }
 
+/**
+ * CTA `value` by destination:
+ *   instant form → {lead_gen_form_id} · messaging → {app_destination} ·
+ *   website / call (tel:) → {link}.
+ */
+function ctaValueFor(
+  cta: { value_lead_gen_form_id?: string | null; value_app_destination?: string | null; value_link?: string | null },
+  fallbackLink: string,
+): Record<string, string> {
+  if (cta.value_lead_gen_form_id) return { lead_gen_form_id: cta.value_lead_gen_form_id };
+  if (cta.value_app_destination) return { app_destination: cta.value_app_destination };
+  return { link: cta.value_link || fallbackLink };
+}
+
 export function buildCampaign(spec: CampaignSpec): Operation {
   const c = spec.campaign;
   const payload: JsonObject = {
@@ -160,6 +174,9 @@ export function buildAdSet(spec: CampaignSpec): Operation {
   if (s.start_time) payload.start_time = s.start_time;
   if (s.end_time) payload.end_time = s.end_time;
   if (s.promoted_object) payload.promoted_object = strip(s.promoted_object);
+  // Awareness has no conversion location.
+  if (spec.campaign.objective === "OUTCOME_AWARENESS") delete payload.destination_type;
+  if (s.frequency_control_specs?.length) payload.frequency_control_specs = s.frequency_control_specs;
   if (s.dsa_payor) payload.dsa_payor = s.dsa_payor;
   if (s.dsa_beneficiary) payload.dsa_beneficiary = s.dsa_beneficiary;
 
@@ -172,12 +189,11 @@ export function buildAd(spec: CampaignSpec): Operation {
 
   if (oss.video_data) {
     const v = oss.video_data;
-    const value: Record<string, string> = v.call_to_action.value_lead_gen_form_id
-      ? { lead_gen_form_id: v.call_to_action.value_lead_gen_form_id }
-      : { link: v.call_to_action.value_link || v.link };
+    const value = ctaValueFor(v.call_to_action, v.link);
     const objectStorySpec = strip({
       page_id: oss.page_id,
-      instagram_actor_id: oss.instagram_actor_id,
+      // Meta renamed instagram_actor_id → instagram_user_id (Graph v22+).
+      instagram_user_id: oss.instagram_actor_id,
       video_data: strip({
         video_id: v.video_id,
         image_hash: v.image_hash,
@@ -186,6 +202,7 @@ export function buildAd(spec: CampaignSpec): Operation {
         title: v.title,
         link_description: v.link_description,
         call_to_action: { type: v.call_to_action.type, value },
+        page_welcome_message: v.page_welcome_message,
       }),
     });
     return {
@@ -204,9 +221,7 @@ export function buildAd(spec: CampaignSpec): Operation {
   const ld = oss.link_data!;
 
   // CTA value: website → {link}, lead form → {lead_gen_form_id}.
-  const ctaValue: Record<string, string> = ld.call_to_action.value_lead_gen_form_id
-    ? { lead_gen_form_id: ld.call_to_action.value_lead_gen_form_id }
-    : { link: ld.call_to_action.value_link || ld.link };
+  const ctaValue = ctaValueFor(ld.call_to_action, ld.link);
 
   const cta = { type: ld.call_to_action.type, value: ctaValue };
   const cards = ld.child_attachments?.length ? ld.child_attachments : null;
@@ -215,7 +230,7 @@ export function buildAd(spec: CampaignSpec): Operation {
 
   const objectStorySpec = strip({
     page_id: oss.page_id,
-    instagram_actor_id: oss.instagram_actor_id,
+    instagram_user_id: oss.instagram_actor_id,
     // With asset_feed_spec, link_data is omitted (images/text live there).
     link_data: hasExtras
       ? null
@@ -233,6 +248,7 @@ export function buildAd(spec: CampaignSpec): Operation {
             : null,
           multi_share_optimized: cards ? (ld.multi_share_optimized ?? true) : null,
           multi_share_end_card: cards ? (ld.multi_share_end_card ?? false) : null,
+          page_welcome_message: ld.page_welcome_message,
         }),
   });
 

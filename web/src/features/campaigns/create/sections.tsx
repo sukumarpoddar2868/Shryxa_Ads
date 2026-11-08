@@ -6,12 +6,17 @@ import { Button } from "@/components/ui/button";
 import { Field, Input, Select, inputClass } from "@/components/ui/field";
 import { Callout, Chip } from "@/components/ui/surface";
 import { cn } from "@/lib/cn";
-import { CTA_FOR_LEAD_FORM, CTA_FOR_WEBSITE, CURRENCIES, CURRENCY, MEDIA_SLOTS } from "../engine/presets.ts";
+import { CTA_FOR, CURRENCIES, CURRENCY, MEDIA_SLOTS } from "../engine/presets.ts";
 import type { CtaType } from "../engine/schema.ts";
 import { CarouselEditor, starterCards } from "./carousel-editor";
+import { LaunchPanel } from "./launch-panel";
+import { LeadFormEditor } from "./lead-form-editor";
+import { WhatsAppEditor } from "./whatsapp-editor";
+import { DestinationDetails } from "./destination-details";
 import { MediaSlot } from "../media/media-slot";
+import { ctaLabel } from "./ad-preview";
 import { MEDIA_RULES } from "../media/rules";
-import { CAROUSEL_MIN, PLANNED, cardReady, mediaReady, type AdFormat, type Draft, type SectionId } from "./blueprint";
+import { CAROUSEL_MIN, DESTINATION_LABELS, PLANNED, cardReady, destinationReady, leadFormReady, mediaReady, type AdFormat, type Draft, type SectionId } from "./blueprint";
 import type { SectionProps } from "./create-campaign";
 
 /* ------------------------------------------------------------------ shared */
@@ -208,6 +213,7 @@ export function TextArea({
   max,
   rows = 3,
   placeholder,
+  className,
 }: {
   id: string;
   value: string;
@@ -215,6 +221,7 @@ export function TextArea({
   max: number;
   rows?: number;
   placeholder?: string;
+  className?: string;
 }) {
   const over = value.length > max;
   return (
@@ -226,7 +233,7 @@ export function TextArea({
         placeholder={placeholder}
         onChange={(e) => onChange(e.target.value)}
         aria-invalid={over || undefined}
-        className={cn(inputClass, "h-auto resize-y py-3 leading-relaxed")}
+        className={cn(inputClass, "h-auto resize-y py-3 leading-relaxed", className)}
       />
       <p className={cn("self-end text-[12px] tabular-nums", over ? "text-tomato-700" : "text-ink-muted")}>
         {value.length} / {max}
@@ -313,6 +320,22 @@ export function NameBudgetSection({ draft, update, clients }: SectionProps) {
           </div>
         </Group>
       </div>
+      {draft.objective === "OUTCOME_AWARENESS" && (
+        <div className="mt-6 flex flex-col gap-3 border-t border-line pt-6">
+          <p className="text-[16px] font-extrabold">How often</p>
+          <p className="text-[13px] text-ink-muted">Awareness ads reach as many people as possible. Cap how often one person sees it so it doesn&apos;t get annoying.</p>
+          <div className="flex flex-wrap items-center gap-3">
+            <span className="text-[13px] font-bold">At most</span>
+            <Segmented
+              label="Frequency cap"
+              value={String(c.frequencyCap)}
+              onChange={(v) => set(update, "campaign", { frequencyCap: Number(v) })}
+              options={[1, 2, 3, 5].map((n) => ({ value: String(n), label: `${n}×` }))}
+            />
+            <span className="text-[13px] text-ink-muted">per person every 7 days</span>
+          </div>
+        </div>
+      )}
       <Planned id="name-budget" />
     </>
   );
@@ -380,9 +403,8 @@ export function PlacementsSection({ draft, update, goTo }: SectionProps) {
 export function CreativeSection({ draft, update, clients, goTo }: SectionProps) {
   const ad = draft.ad;
   const client = clients.find((c) => c.id === draft.clientId);
-  const ctas: CtaType[] = ad.destination === "website" ? CTA_FOR_WEBSITE : CTA_FOR_LEAD_FORM;
-  const label = (c: string) => c.charAt(0) + c.slice(1).toLowerCase().replace(/_/g, " ");
-
+  const ctas: CtaType[] = CTA_FOR[ad.destination];
+  
   return (
     <>
       <Header level="Ad" title="Creative" blurb="What people see, and where they go when they tap." />
@@ -488,24 +510,29 @@ export function CreativeSection({ draft, update, clients, goTo }: SectionProps) 
 
         <Group title="Destination">
           <p className="text-[14px]">
-            <strong>{ad.destination === "website" ? "Website" : "Instant form"}</strong>{" "}
-            <span className="text-ink-muted">· set by your goal in</span>{" "}
+            <strong>{DESTINATION_LABELS[ad.destination]}</strong> <span className="text-ink-muted">· set by your goal in</span>{" "}
             <button type="button" onClick={() => goTo("start")} className="font-bold text-tomato-700 hover:underline">
               Start
             </button>
           </p>
-          {ad.destination === "website" ? (
-            <Field id="url" label="Website URL">
-              <Input id="url" type="url" placeholder="https://" value={ad.url} onChange={(e) => set(update, "ad", { url: e.target.value })} />
-            </Field>
-          ) : (
-            <Callout>The instant form builder (questions, privacy link, thank-you screen) arrives with this step&apos;s deep build.</Callout>
-          )}
-          <Field id="cta" label="Button">
-            <Select id="cta" value={ad.cta} onChange={(e) => set(update, "ad", { cta: e.target.value as CtaType })}>
+          {ad.destination === "lead_form" && <LeadFormEditor draft={draft} update={update} />}
+          {ad.destination === "whatsapp" && <WhatsAppEditor draft={draft} update={update} />}
+          <DestinationDetails draft={draft} update={update} client={clients.find((c) => c.id === draft.clientId)} />
+          <Field
+            id="cta"
+            label="Button"
+            hint={
+              ad.destination === "whatsapp" && ad.format === "carousel" && ad.whatsapp.perItem
+                ? "Item links show a “Contact us” button."
+                : ctas.length === 1
+                  ? "Messaging and call ads use a fixed button."
+                  : undefined
+            }
+          >
+            <Select id="cta" value={ad.cta} disabled={ctas.length === 1} onChange={(e) => set(update, "ad", { cta: e.target.value as CtaType })}>
               {ctas.map((c) => (
                 <option key={c} value={c}>
-                  {label(c)}
+                  {ctaLabel(c)}
                 </option>
               ))}
             </Select>
@@ -519,7 +546,17 @@ export function CreativeSection({ draft, update, clients, goTo }: SectionProps) 
 
 /* ------------------------------------------------------------------ Review */
 
-export function ReviewSection({ draft, goTo }: SectionProps) {
+const DESTINATION_CHECK: Record<Draft["ad"]["destination"], string> = {
+  website: "Website link added",
+  lead_form: "Instant form ready",
+  whatsapp: "WhatsApp details OK",
+  call: "Phone number added",
+  messenger: "Messenger ready",
+  instagram_dm: "Instagram Direct ready",
+  none: "Reach campaign — no destination needed",
+};
+
+export function ReviewSection({ draft, update, clients, goTo }: SectionProps) {
   const checks: { id: SectionId; label: string; ok: boolean }[] = [
     { id: "start", label: "Goal chosen and campaign drafted with AI", ok: draft.objective !== null && draft.generated },
     { id: "name-budget", label: "Name and budget set", ok: draft.campaign.name.trim() !== "" && Number(draft.campaign.amount) > 0 },
@@ -536,6 +573,9 @@ export function ReviewSection({ draft, goTo }: SectionProps) {
           ok: !!draft.ad.primaryText.trim() && draft.ad.carousel.cards.length >= CAROUSEL_MIN && draft.ad.carousel.cards.every(cardReady),
         }
       : { id: "creative" as const, label: "Primary text and headline written", ok: !!draft.ad.primaryText.trim() && !!draft.ad.headline.trim() },
+    ...(draft.ad.destination === "lead_form"
+      ? [{ id: "creative" as const, label: "Instant form has a privacy link and contact fields", ok: leadFormReady(draft) }]
+      : [{ id: "creative" as const, label: DESTINATION_CHECK[draft.ad.destination], ok: destinationReady(draft) }]),
   ];
   const allOk = checks.every((c) => c.ok);
   return (
@@ -543,7 +583,7 @@ export function ReviewSection({ draft, goTo }: SectionProps) {
       <Header level="Review" title="Review & launch" blurb="Check everything, then launch. Campaigns start paused so nothing spends by surprise." />
       <ul className="flex flex-col gap-2">
         {checks.map((c) => (
-          <li key={c.id} className="flex items-center justify-between gap-3 rounded-card bg-lavender-soft px-4 py-3 text-[14px]">
+          <li key={c.label} className="flex items-center justify-between gap-3 rounded-card bg-lavender-soft px-4 py-3 text-[14px]">
             <span className="flex items-center gap-2 font-bold">
               <Chip tone={c.ok ? "active" : "stopped"}>{c.ok ? "Done" : "Missing"}</Chip>
               {c.label}
@@ -556,15 +596,7 @@ export function ReviewSection({ draft, goTo }: SectionProps) {
           </li>
         ))}
       </ul>
-      <div className="mt-6 flex flex-wrap gap-3">
-        <Button type="button" variant="secondary" disabled>
-          Check with Meta
-        </Button>
-        <Button type="button" disabled>
-          Launch paused
-        </Button>
-      </div>
-      {allOk && <p className="mt-3 text-[13px] text-ink-muted">Launching is wired up in the next build step.</p>}
+      <LaunchPanel draft={draft} update={update} clients={clients} ready={allOk} />
       <Planned id="review" />
     </>
   );
