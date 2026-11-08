@@ -271,6 +271,30 @@ export const initialDraft = (client: { id: number; name: string; pixelId?: strin
   ad: { destination: "lead_form", url: "", phone: "", whatsappNumber: "", conversionEvent: "LEAD", whatsapp: { greeting: "", style: "prefill", prefill: "", questions: [], perItem: false }, pixel: client?.pixelId ? { id: client.pixelId, name: client.pixelName ?? `Pixel ${client.pixelId}` } : null, primaryText: "", headline: "", description: "", cta: "GET_QUOTE", format: "single", media: {}, leadForm: { name: "", privacyUrl: "", fields: ["FULL_NAME", "PHONE_NUMBER", "EMAIL"], questions: [], thankYou: "Thanks! We'll call you back shortly." }, cardIdeas: [], carousel: { cards: [], optimizeOrder: true, endCard: false } },
 });
 
+/**
+ * Fill any missing fields from the defaults. Protects against drafts created
+ * before a field existed (e.g. state kept across a dev hot-reload).
+ */
+export function normalizeDraft(d: Draft): Draft {
+  const base = initialDraft(null);
+  return {
+    ...base,
+    ...d,
+    setup: { ...base.setup, ...d.setup },
+    campaign: { ...base.campaign, ...d.campaign },
+    audience: { ...base.audience, ...d.audience },
+    placements: { ...base.placements, ...d.placements },
+    ad: {
+      ...base.ad,
+      ...d.ad,
+      media: { ...base.ad.media, ...d.ad?.media },
+      leadForm: { ...base.ad.leadForm, ...d.ad?.leadForm },
+      whatsapp: { ...base.ad.whatsapp, ...d.ad?.whatsapp },
+      carousel: { ...base.ad.carousel, ...d.ad?.carousel },
+    },
+  };
+}
+
 /** Section is "done" enough to show a tick in the rail. */
 export function sectionComplete(id: SectionId, d: Draft): boolean {
   switch (id) {

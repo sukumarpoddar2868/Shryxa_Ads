@@ -1,11 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { ArrowLeft, ArrowRight, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/surface";
 import { cn } from "@/lib/cn";
-import { LEVELS, SECTION_ORDER, initialDraft, sectionComplete, type Draft, type SectionId } from "./blueprint";
+import { LEVELS, SECTION_ORDER, initialDraft, normalizeDraft, sectionComplete, type Draft, type SectionId } from "./blueprint";
 import { AdPreview } from "./ad-preview";
 import { Summary } from "./summary";
 import { AudienceSection } from "./audience-section";
@@ -34,9 +34,10 @@ export type SectionProps = {
 };
 
 export function CreateCampaign({ clients, isAgency }: { clients: ClientOption[]; isAgency: boolean }) {
-  const [draft, setDraft] = useState<Draft>(() => initialDraft(clients.length === 1 ? clients[0] : null));
+  const [rawDraft, setDraft] = useState<Draft>(() => initialDraft(clients.length === 1 ? clients[0] : null));
+  const draft = useMemo(() => normalizeDraft(rawDraft), [rawDraft]);
   const [active, setActive] = useState<SectionId>("start");
-  const update = (fn: (d: Draft) => Draft) => setDraft(fn);
+  const update = (fn: (d: Draft) => Draft) => setDraft((d) => fn(normalizeDraft(d)));
 
   const idx = SECTION_ORDER.indexOf(active);
   const prev = SECTION_ORDER[idx - 1];
