@@ -528,10 +528,10 @@ export function Audiences() {
 /* ---------------------------------------------------------- Plans */
 export function Plans() {
   const plans = [
-    { name: "Starter", clients: 1, seats: 1, for: "One business, its own ads.", tone: "bg-paper" },
-    { name: "Agency Lite", clients: 5, seats: 1, for: "A solo marketer with a few clients.", tone: "bg-lavender" },
-    { name: "Agency Standard", clients: 10, seats: 2, for: "A small team growing its book.", tone: "bg-chartreuse" },
-    { name: "Agency Pro", clients: 25, seats: 5, for: "Agencies running many accounts.", tone: "bg-ink text-paper" },
+    { name: "Starter", clients: 1, seats: 1, for: "One business, its own ads.", tone: "bg-paper", price: "₹999 / month · $21 outside India" },
+    { price: "Priced on request · invoiced", name: "Agency Lite", clients: 5, seats: 1, for: "A solo marketer with a few clients.", tone: "bg-lavender" },
+    { price: "Priced on request · invoiced", name: "Agency Standard", clients: 10, seats: 2, for: "A small team growing its book.", tone: "bg-chartreuse" },
+    { price: "Priced on request · invoiced", name: "Agency Pro", clients: 25, seats: 5, for: "Agencies running many accounts.", tone: "bg-ink text-paper" },
   ];
   return (
     <section id="plans" className="relative scroll-mt-16 overflow-hidden bg-lavender-soft py-24 md:py-32">
@@ -540,7 +540,7 @@ export function Plans() {
         <SectionTitle
           eyebrow="Plans"
           title="pick by how many clients you run."
-          sub="Every plan starts with a 2-day free trial. Billed monthly in INR or USD — prices are shown at checkout."
+          sub="Every plan starts with a 2-day free trial. Ad spend is paid to Meta separately."
         />
         <div className="mt-14 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           {plans.map((p, i) => (
@@ -549,6 +549,7 @@ export function Plans() {
               <p className="mt-2 min-h-[3em] text-[15px] leading-snug opacity-75">{p.for}</p>
               <p className="mt-6 text-[56px] font-extrabold leading-none tracking-[-0.04em]">{p.clients}</p>
               <p className="mt-1 text-[15px] font-bold">{p.clients === 1 ? "client" : "clients"}</p>
+              <p className="mt-4 text-[15px] font-extrabold">{p.price}</p>
               <ul className="mt-6 space-y-2 text-[15px]">
                 {[`${p.seats} team ${p.seats === 1 ? "seat" : "seats"}`, "AI copy + previews", "Auto-pause protection"].map((f) => (
                   <li key={f} className="flex items-center gap-2">
@@ -580,7 +581,7 @@ export function Faq() {
     },
     {
       q: "Will my campaign start spending straight away?",
-      a: "Only if you choose to. Campaigns are created PAUSED by default, so you can review them first and switch them live from the dashboard.",
+      a: "Only if you choose to. Campaigns are created PAUSED, so you can review them first and turn them on from the Campaigns page.",
     },
     {
       q: "How do my clients connect their Meta account?",
@@ -596,7 +597,7 @@ export function Faq() {
     },
     {
       q: "Which campaign types are supported?",
-      a: "Website traffic (with your Pixel) and lead generation with Instant Forms, using single-image creatives. More objectives are on the way.",
+      a: "Leads (Instant Form, WhatsApp, calls or your website), Traffic (website or Instagram profile), Awareness, Engagement (WhatsApp, Messenger, Instagram DMs) and Sales — with single image, carousel or video ads. Leads from Instant Forms land in your Leads inbox with CSV export.",
     },
   ];
   return (

@@ -32,6 +32,12 @@ const MetaEnvSchema = z.object({
     .optional()
     .transform((v) => v?.trim() || undefined),
   META_API_VERSION: z.string().regex(/^v\d+\.\d+$/).default("v23.0"),
+  // Optional Marketing API sandbox ad account (act_… or digits): offered in the
+  // asset picker whenever the connected login can read it.
+  META_SANDBOX_AD_ACCOUNT_ID: z
+    .string()
+    .optional()
+    .transform((v) => v?.trim().replace(/^act_/, "") || undefined),
   META_TOKEN_ENCRYPTION_KEY: z.string().length(44),
   // "true" only once Pixel + CAPI are verified: unlocks conversion objectives
   // (Sales, Website leads). Instant Form leads never need it.
@@ -79,6 +85,33 @@ export function aiEnv(): AiEnv {
 
 export function aiConfigured(): boolean {
   return AiEnvSchema.safeParse(process.env).success;
+}
+
+/** Razorpay (Starter self-serve checkout). Optional: without it /account shows "contact us". */
+const BillingEnvSchema = z.object({
+  RAZORPAY_KEY_ID: z.string().trim().min(8),
+  RAZORPAY_KEY_SECRET: z.string().trim().min(8),
+  RAZORPAY_PLAN_ID_INR: z.string().trim().optional().transform((v) => v || undefined),
+  RAZORPAY_PLAN_ID_USD: z.string().trim().optional().transform((v) => v || undefined),
+  RAZORPAY_WEBHOOK_SECRET: z.string().trim().optional().transform((v) => v || undefined),
+});
+export type BillingEnv = z.infer<typeof BillingEnvSchema>;
+
+let billingCached: BillingEnv | null = null;
+export function billingEnv(): BillingEnv {
+  if (billingCached) return billingCached;
+  const parsed = BillingEnvSchema.safeParse(process.env);
+  if (!parsed.success) throw new Error("Billing is not configured: set RAZORPAY_KEY_ID and RAZORPAY_KEY_SECRET.");
+  billingCached = parsed.data;
+  return billingCached;
+}
+export function billingConfigured(): boolean {
+  return BillingEnvSchema.safeParse(process.env).success;
+}
+
+/** Shared secret for scheduled jobs (Vercel Cron sends it as a Bearer token). */
+export function cronSecret(): string | undefined {
+  return process.env.CRON_SECRET?.trim() || undefined;
 }
 
 export function env(): Env {

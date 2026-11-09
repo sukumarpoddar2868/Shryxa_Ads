@@ -43,7 +43,7 @@ async function Gate({ children }: { children: React.ReactNode }) {
 
 async function UserNav() {
   const user = await requireUser();
-  return <SidebarNav accountType={user.accountType} />;
+  return <SidebarNav accountType={user.accountType} isAdmin={user.isAdmin} />;
 }
 
 async function UserBadge() {

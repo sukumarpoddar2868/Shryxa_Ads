@@ -26,6 +26,10 @@ export type CampaignListItem = {
   statusLabel: string;
   currency: string;
   budget: { amount: number; type: "daily" | "lifetime" } | null; // major units
+  /** Lifetime spend cap (major units), null = none. */
+  spendCap: number | null;
+  /** Raw Meta status the user set (ACTIVE / PAUSED / ARCHIVED). */
+  configuredStatus: string | null;
   spend: number; // last 7 days, major units
   results: number | null;
   resultLabel: string | null;
@@ -50,6 +54,8 @@ type MetaCampaign = {
   name?: string;
   objective?: string;
   effective_status?: string;
+  status?: string;
+  spend_cap?: string;
   daily_budget?: string;
   lifetime_budget?: string;
   created_time?: string;
@@ -117,7 +123,7 @@ export async function loadCampaignList(userId: number): Promise<CampaignList> {
             token,
             {
               fields:
-                "id,name,objective,effective_status,daily_budget,lifetime_budget,created_time,adsets.limit(1){daily_budget,lifetime_budget},insights.date_preset(last_7d){spend,reach,inline_link_clicks,actions}",
+                "id,name,objective,status,effective_status,spend_cap,daily_budget,lifetime_budget,created_time,adsets.limit(1){daily_budget,lifetime_budget},insights.date_preset(last_7d){spend,reach,inline_link_clicks,actions}",
               limit: 100,
             },
             2,
@@ -145,6 +151,8 @@ export async function loadCampaignList(userId: number): Promise<CampaignList> {
             statusLabel,
             currency,
             budget: daily ? { amount: daily, type: "daily" } : lifetime ? { amount: lifetime, type: "lifetime" } : null,
+            spendCap: m.spend_cap && Number(m.spend_cap) > 0 && m.spend_cap !== "922337203685478" ? Number(m.spend_cap) / 100 : null,
+            configuredStatus: m.status ?? null,
             spend,
             results: r.value,
             resultLabel: r.label,

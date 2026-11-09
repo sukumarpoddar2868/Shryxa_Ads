@@ -11,6 +11,7 @@ import { Select } from "@/components/ui/field";
 import { listBusinessConnections } from "@/features/meta-connect/store";
 import { AssetPicker } from "@/features/clients/components/asset-picker";
 import { InviteLink } from "@/features/clients/components/invite-link";
+import { TestTokenForm } from "@/features/clients/components/test-token-form";
 import { ReadinessList } from "@/features/clients/components/readiness";
 import { loadClientMeta, META_ERRORS } from "@/features/meta-connect/client-meta";
 import { metaConfigured } from "@/lib/env";
@@ -128,6 +129,11 @@ export default async function ClientPage({ params, searchParams }: PageProps<"/c
                 </div>
               </form>
             )}
+          </div>
+        )}
+        {user.isAdmin && meta && (
+          <div className="mt-6">
+            <TestTokenForm clientId={client.id} />
           </div>
         )}
       </Card>

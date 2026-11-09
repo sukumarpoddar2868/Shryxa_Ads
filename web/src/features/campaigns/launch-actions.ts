@@ -2,12 +2,14 @@
 
 import { z } from "zod";
 import { requireUser } from "@/features/auth/dal";
+import { getAccess } from "@/features/billing/access";
 import { getClient } from "@/features/clients/data";
 import { metaLinks } from "@/features/meta-connect/discovery";
 import { getConnectionToken } from "@/features/meta-connect/store";
 import { MetaApiError, graphGet } from "@/lib/meta/graph";
 import { CTA_TYPES } from "./engine/schema.ts";
 import { CONVERSION_EVENTS, CTA_FOR, CURRENCIES, DESTINATIONS } from "./engine/presets.ts";
+import { resolveInterestIds } from "./interests";
 import { launchCampaign, type LaunchInput } from "./launch";
 import { pushImage, pushVideo } from "./media/push";
 import { recordLaunch, removeMedia } from "./store";
@@ -42,6 +44,7 @@ const LaunchPayload = z.object({
     device: z.enum(["all", "android", "ios"]),
     include: z.array(z.string().regex(/^\d+$/)).max(20),
     exclude: z.array(z.string().regex(/^\d+$/)).max(20),
+    interests: z.array(z.string().trim().min(1).max(100)).max(5).default([]),
   }),
   placements: z.object({ manual: z.boolean(), facebook: z.boolean(), instagram: z.boolean() }),
   ad: z.object({
@@ -172,6 +175,10 @@ export async function launchDraftAction(raw: LaunchPayload, mode: "validate" | "
   const issues = problems(p);
   if (issues.length) return fail("Some campaign details need fixing.", issues);
 
+  if (mode === "live" && !(await getAccess(user.id, { sync: true })).allowed) {
+    return fail("Your trial or plan has ended. Choose a plan on the Account page to launch campaigns.");
+  }
+
   const client = await getClient(user.id, p.clientId);
   if (!client) return fail("Client not found.");
   if (!client.ad_account_id || !client.page_id) return fail("Pick this client's ad account and Facebook Page first.");
@@ -234,6 +241,9 @@ export async function launchDraftAction(raw: LaunchPayload, mode: "validate" | "
     };
   }
 
+  // AI / typed interest names → real Meta interest ids (top match each; misses are skipped).
+  const interests = p.audience.interests.length ? await resolveInterestIds(token, p.audience.interests) : [];
+
   const lf = p.ad.leadForm;
   const landing = p.ad.url || originOf(lf?.privacyUrl ?? "");
   const input: LaunchInput = {
@@ -246,7 +256,7 @@ export async function launchDraftAction(raw: LaunchPayload, mode: "validate" | "
       age_min: p.audience.ageMin,
       age_max: p.audience.ageMax,
       gender: p.audience.gender,
-      interest_targeting: [], // AI interests are suggestions only (not matched to Meta ids yet)
+      interest_targeting: interests,
     },
     epicenters: p.audience.pins.map((x) => ({ lat: x.lat, lng: x.lng, radius_km: x.radiusKm })),
     dailyBudget: p.campaign.amount,

@@ -58,3 +58,10 @@ export async function destroySession(): Promise<void> {
   if (token) await db().from("sessions").delete().eq("token", token);
   jar.delete(SESSION_COOKIE);
 }
+
+/** Signs out every other device of this user (after a password change). */
+export async function endOtherSessions(userId: number): Promise<void> {
+  const token = (await cookies()).get(SESSION_COOKIE)?.value;
+  const q = db().from("sessions").delete().eq("user_id", userId);
+  await (token ? q.neq("token", token) : q);
+}

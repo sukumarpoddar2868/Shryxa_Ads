@@ -1,4 +1,5 @@
 import "server-only";
+import { pageAccessToken } from "@/features/meta-connect/page-token";
 import { graphDelete, graphPost, MetaApiError } from "@/lib/meta/graph";
 import { LEAD_FORM_REF, PLACEHOLDERS, substitute, type JsonObject, type Operation } from "./engine/builders.ts";
 import { buildFormPayload } from "./engine/lead-form.ts";
@@ -46,6 +47,7 @@ export async function runMeta(
   const result: RunResult = { mode, adAccountId: spec.ad_account_id, ok: true, steps: [], ids: {} };
   const refs: Record<string, string> = {};
   const created: { resourceType: RunStep["resourceType"]; id: string }[] = [];
+  let formToken: string | null = null;
 
   const post = (endpoint: string, payload: JsonObject) =>
     graphPost<{ id?: string; success?: boolean }>(endpoint, token, {
@@ -65,10 +67,15 @@ export async function runMeta(
       } else {
         const step: RunStep = { step: 0, resourceType: "lead_form", endpoint, payload, id: null };
         result.steps.push(step);
-        const res = await post(endpoint, payload).catch((e: unknown) => {
-          step.error = describeMetaError(e);
-          throw e;
-        });
+        const res = await pageAccessToken(oss.page_id, token)
+          .then((pt) => {
+            formToken = pt;
+            return graphPost<{ id?: string }>(endpoint, pt, toParams(payload));
+          })
+          .catch((e: unknown) => {
+            step.error = describeMetaError(e);
+            throw e;
+          });
         if (!res.id) throw new Error("Meta created the lead form but returned no id.");
         step.id = res.id;
         created.push({ resourceType: "lead_form", id: res.id });
@@ -106,7 +113,12 @@ export async function runMeta(
       result.cleanup = [];
       for (const r of [...created].reverse()) {
         try {
-          await graphDelete(r.id, token);
+          if (r.resourceType === "lead_form") {
+            // Forms can't be deleted, only archived (Page token).
+            await graphPost(r.id, formToken ?? token, { status: "ARCHIVED" });
+          } else {
+            await graphDelete(r.id, token);
+          }
           result.cleanup.push({ ...r, deleted: true });
         } catch (ce) {
           result.cleanup.push({ ...r, deleted: false, error: describeMetaError(ce) });

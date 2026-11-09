@@ -59,13 +59,21 @@ export function AppSidebar({ nav, footer }: { nav: ReactNode; footer: ReactNode 
         <Link href="/dashboard" className="px-2" aria-label="Shryxa Ads dashboard">
           {collapsed ? (
             <>
-              <Wordmark className="text-[26px] text-paper md:hidden" />
+              <Wordmark className="hidden text-[26px] text-paper sm:inline md:hidden" />
+              <span className="text-[26px] leading-none font-extrabold sm:hidden">
+                s<span className="text-tomato">.</span>
+              </span>
               <span className="hidden text-[26px] leading-none font-extrabold md:inline">
                 s<span className="text-tomato">.</span>
               </span>
             </>
           ) : (
-            <Wordmark className="text-[26px] text-paper" />
+            <>
+              <Wordmark className="hidden text-[26px] text-paper sm:inline" />
+              <span className="text-[26px] leading-none font-extrabold sm:hidden">
+                s<span className="text-tomato">.</span>
+              </span>
+            </>
           )}
         </Link>
         <button

@@ -17,7 +17,7 @@ export const CONTACT = {
 // Markdown hard line breaks (two trailing spaces) keep the address on separate lines.
 const contactBlock = [CONTACT.name, CONTACT.city, `**${CONTACT.email}**`, `WhatsApp **${CONTACT.whatsapp}**`].join("  \n");
 
-export type LegalDoc = { slug: "privacy" | "terms" | "refund" | "service"; title: string; short: string; body: string };
+export type LegalDoc = { slug: "privacy" | "terms" | "refund" | "service" | "data-deletion"; title: string; short: string; body: string };
 
 const privacy: LegalDoc = {
   slug: "privacy",
@@ -453,7 +453,53 @@ ${contactBlock}
 `,
 };
 
-export const LEGAL_DOCS: LegalDoc[] = [privacy, terms, refund, service];
+const dataDeletion: LegalDoc = {
+  slug: "data-deletion",
+  title: "Data Deletion",
+  short: "Data deletion",
+  body: `
+## 1. What we keep from Facebook
+
+When you connect Facebook, Shryxa Ads stores only what it needs to run your
+ads: an **encrypted access token**, your Facebook user id and name, and the
+ids and names of the ad account, Page, Instagram account and Pixel you pick.
+We don't store your posts, friends, messages, or the leads collected by your
+forms — leads are read live from Meta when you open the Leads page.
+
+## 2. Delete your Facebook data — three ways
+
+1. **From Facebook.** Go to Facebook → *Settings & privacy* → *Settings* →
+   *Apps and websites*, find **Shryxa Ads** and choose **Remove**. Facebook
+   tells us automatically and we delete your Facebook data from our systems.
+   You'll get a confirmation code you can check on this page.
+2. **From Shryxa Ads.** Open a client and choose **Disconnect Facebook** to
+   delete that connection, or go to **Account → Delete account** to delete
+   your whole account and everything in it.
+3. **By email.** Write to **${CONTACT.email}** from your account email and
+   we'll delete it within 7 days.
+
+## 3. What gets deleted
+
+- Your encrypted Facebook access tokens and connection records.
+- The Facebook user id and name we stored with them.
+- Deleting your account also removes your clients, saved drafts, uploaded
+  ad media and login sessions.
+
+Campaigns you already launched live inside **your own Meta ad account** —
+we don't delete them on Meta. You keep full control in Meta Ads Manager.
+
+## 4. Timing
+
+Removal through Facebook or the app happens **immediately**. Email requests
+are handled within 7 days.
+
+## 5. Contact
+
+${contactBlock}
+`,
+};
+
+export const LEGAL_DOCS: LegalDoc[] = [privacy, terms, refund, service, dataDeletion];
 
 export function getLegalDoc(slug: LegalDoc["slug"]): LegalDoc {
   const doc = LEGAL_DOCS.find((d) => d.slug === slug);

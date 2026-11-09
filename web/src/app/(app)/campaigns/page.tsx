@@ -8,6 +8,7 @@ import { ensureSelfClient } from "@/features/clients/data";
 import { deleteDraftAction } from "@/features/campaigns/draft-actions";
 import { loadCampaignList, type CampaignListItem, type ListStatus } from "@/features/campaigns/list";
 import { CampaignFilters } from "@/features/campaigns/list/filters";
+import { CampaignRowActions } from "@/features/campaigns/manage/row-actions";
 
 export const metadata: Metadata = { title: "Campaigns" };
 
@@ -118,7 +119,7 @@ export default async function CampaignsPage({ searchParams }: PageProps<"/campai
         (campaigns.length > 0 ? (
           <section aria-label="Campaigns" className="overflow-hidden rounded-card bg-paper">
             <div className="overflow-x-auto">
-              <table className="w-full min-w-[860px] text-left text-[14px]">
+              <table className="w-full min-w-[940px] text-left text-[14px]">
                 <thead className="bg-lavender-soft text-[12px] font-bold uppercase tracking-wide text-ink-muted">
                   <tr>
                     <th className="px-4 py-3">Campaign</th>
@@ -129,7 +130,7 @@ export default async function CampaignsPage({ searchParams }: PageProps<"/campai
                     <th className="px-4 py-3 text-right">Results · 7d</th>
                     <th className="px-4 py-3 text-right">Cost / result</th>
                     <th className="px-4 py-3">
-                      <span className="sr-only">Open</span>
+                      <span className="sr-only">Actions</span>
                     </th>
                   </tr>
                 </thead>
@@ -140,7 +141,7 @@ export default async function CampaignsPage({ searchParams }: PageProps<"/campai
                 </tbody>
               </table>
             </div>
-            <p className="border-t border-line px-4 py-2 text-[12px] text-ink-muted">Live from Meta · spend and results for the last 7 days. Pause / resume from Shryxa is coming next.</p>
+            <p className="border-t border-line px-4 py-2 text-[12px] text-ink-muted">Live from Meta · spend and results for the last 7 days. Use ▶ / ❚❚ to turn a campaign on or pause it; ⋯ for budget, spend cap and stop.</p>
           </section>
         ) : (
           <Card className="flex flex-col items-start gap-3 p-8">
@@ -196,9 +197,12 @@ function Row({ c, isAgency }: { c: CampaignListItem; isAgency: boolean }) {
       </td>
       <td className="px-4 py-3 text-right tabular-nums">{c.costPerResult ? money(c.costPerResult, c.currency) : "—"}</td>
       <td className="px-4 py-3 text-right">
+        <div className="flex items-center justify-end gap-1">
+        <CampaignRowActions clientId={c.clientId} campaignId={c.metaId} name={c.name} configuredStatus={c.configuredStatus} currency={c.currency} budget={c.budget} spendCap={c.spendCap} />
         <a href={c.adsManagerUrl} target="_blank" rel="noreferrer" title="Open in Ads Manager" aria-label={`Open ${c.name} in Ads Manager`} className="inline-grid size-8 place-items-center rounded-full hover:bg-lavender-soft">
           <ExternalLink className="size-4" aria-hidden />
         </a>
+        </div>
       </td>
     </tr>
   );

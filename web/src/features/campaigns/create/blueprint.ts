@@ -340,10 +340,9 @@ export const PLANNED: Partial<Record<SectionId, string[]>> = {
   "name-budget": [
     "Budget guidance per city and objective",
     "Campaign budget (Advantage+) vs ad set budget",
-    "Spend cap editor and ad scheduling (dayparting)",
+    "Ad scheduling (dayparting)",
   ],
   audience: [
-    "Match AI interests to real Meta interests (country-aware)",
     "More custom audiences: lead-form openers, video viewers, WhatsApp chatters",
   ],
   placements: ["Per-position control (Feed, Stories, Reels, right column)", "Placement preview per position"],

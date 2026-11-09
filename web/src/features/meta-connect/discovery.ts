@@ -1,4 +1,5 @@
 import "server-only";
+import { metaEnv } from "@/lib/env";
 import { graphGet, graphList, MetaApiError } from "@/lib/meta/graph";
 
 /* Permissions our Login-for-Business configs must grant. */
@@ -50,6 +51,13 @@ export async function discoverAssets(token: string): Promise<Discovery> {
     graphList<RawAdAccount>("me/adaccounts", token, { fields: "id,account_id,name,currency,account_status,business{id,name}" }),
     graphList<RawPage>("me/accounts", token, { fields: "id,name,instagram_business_account{id,username}" }).catch(() => [] as RawPage[]),
   ]);
+
+  // Marketing API sandbox account (testing): include it if this login can read it.
+  const sandbox = metaEnv().META_SANDBOX_AD_ACCOUNT_ID;
+  if (sandbox && !accounts.some((a) => a.account_id === sandbox)) {
+    const extra = await graphGet<RawAdAccount>(`act_${sandbox}`, token, { fields: "id,account_id,name,currency,account_status,business{id,name}" }).catch(() => null);
+    if (extra) accounts.push({ ...extra, name: `${extra.name || "Sandbox"} (sandbox)` });
+  }
 
   return {
     metaUser: me,

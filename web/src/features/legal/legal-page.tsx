@@ -39,7 +39,7 @@ const md: Components = {
   td: ({ children }) => <td className="border-t border-paper px-4 py-3 align-top leading-relaxed">{children}</td>,
 };
 
-export function LegalPage({ doc }: { doc: LegalDoc }) {
+export function LegalPage({ doc, notice }: { doc: LegalDoc; notice?: React.ReactNode }) {
   return (
     <>
       <SiteNav />
@@ -96,6 +96,7 @@ export function LegalPage({ doc }: { doc: LegalDoc }) {
           </aside>
 
           <article className="min-w-0 max-w-[760px]">
+            {notice}
             <ReactMarkdown remarkPlugins={[remarkGfm]} components={md}>
               {doc.body}
             </ReactMarkdown>

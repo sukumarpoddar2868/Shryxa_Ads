@@ -223,7 +223,7 @@ export function AudienceSection({ draft, update, goTo, clients }: SectionProps) 
           )}
         </Group>
 
-        <Group title="Interests" hint="AI suggestions. Not sent to Meta yet — until interest matching ships, ads reach everyone in your areas who fits the age and gender.">
+        <Group title="Interests" hint="Matched to real Meta interests at launch (closest match each). Leave empty to reach everyone in your areas who fits the age and gender.">
           <ChipInput id="interests" values={a.interests} max={5} onChange={(v) => set(update, "audience", { interests: v })} placeholder="e.g. Personal finance" />
         </Group>
 
