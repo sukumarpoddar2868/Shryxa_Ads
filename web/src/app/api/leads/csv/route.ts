@@ -12,7 +12,7 @@ export async function GET(req: Request) {
   try {
     const { form, leads } = await listLeads(user.id, clientId, formId, 100);
     const name = form.name.replace(/[^\w-]+/g, "_").slice(0, 60) || "leads";
-    return new Response(leadsCsv(leads), {
+    return new Response(leadsCsv(leads, form.labels), {
       headers: {
         "Content-Type": "text/csv; charset=utf-8",
         "Content-Disposition": `attachment; filename="${name}-${new Date().toISOString().slice(0, 10)}.csv"`,

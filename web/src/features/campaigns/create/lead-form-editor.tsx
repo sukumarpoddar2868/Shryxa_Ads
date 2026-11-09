@@ -78,7 +78,7 @@ export function LeadFormEditor({ draft, update }: Pick<SectionProps, "draft" | "
         id="privacy"
         label="Privacy policy link"
         error={privacyBad ? "Enter a full link starting with https://" : undefined}
-        hint="Required by Meta. A page on the business website explaining how contact details are used."
+        hint="Required by Meta. Prefilled with Shryxa's privacy page — if the business has its own privacy page, use that instead (it should say how the business uses these contact details)."
       >
         <Input id="privacy" type="url" className="bg-paper" placeholder="https://yourwebsite.com/privacy" value={f.privacyUrl} aria-invalid={privacyBad || undefined} onChange={(e) => set({ privacyUrl: e.target.value })} />
       </Field>

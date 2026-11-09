@@ -65,6 +65,19 @@ export default async function LeadsPage({ searchParams }: PageProps<"/leads">) {
     }
   }
   const cols = leadColumns(leads);
+  const withLeads = forms.filter((f) => (f.leadsCount ?? 0) > 0);
+  const empty = forms.filter((f) => !((f.leadsCount ?? 0) > 0));
+  const formPill = (f: LeadForm) => (
+    <Link
+      key={f.id}
+      href={`/leads?client=${client.id}&form=${f.id}`}
+      aria-current={f.id === form?.id ? "page" : undefined}
+      className={cn("rounded-pill px-4 py-2 text-[14px] font-bold", f.id === form?.id ? "bg-chartreuse text-ink" : "bg-paper text-ink hover:bg-lavender")}
+    >
+      {f.name}
+      {f.leadsCount !== null && <span className="ml-2 text-ink-muted tabular-nums">{f.leadsCount}</span>}
+    </Link>
+  );
 
   return (
     <div className="flex flex-col gap-6">
@@ -85,18 +98,16 @@ export default async function LeadsPage({ searchParams }: PageProps<"/leads">) {
       )}
 
       {forms.length > 0 && (
-        <nav aria-label="Forms" className="flex flex-wrap gap-2">
-          {forms.map((f) => (
-            <Link
-              key={f.id}
-              href={`/leads?client=${client.id}&form=${f.id}`}
-              aria-current={f.id === form?.id ? "page" : undefined}
-              className={cn("rounded-pill px-4 py-2 text-[14px] font-bold", f.id === form?.id ? "bg-chartreuse text-ink" : "bg-paper text-ink hover:bg-lavender")}
-            >
-              {f.name}
-              {f.leadsCount !== null && <span className="ml-2 text-ink-muted tabular-nums">{f.leadsCount}</span>}
-            </Link>
-          ))}
+        <nav aria-label="Forms" className="flex flex-col gap-2">
+          <div className="flex flex-wrap gap-2">{withLeads.map(formPill)}</div>
+          {empty.length > 0 && (
+            <details open={withLeads.length === 0 || empty.some((f) => f.id === form?.id)}>
+              <summary className="cursor-pointer text-[13px] font-bold text-ink-muted">
+                {withLeads.length ? `Show ${empty.length} form${empty.length === 1 ? "" : "s"} with no leads yet` : `${empty.length} form${empty.length === 1 ? "" : "s"}, no leads yet`}
+              </summary>
+              <div className="mt-2 flex flex-wrap gap-2">{empty.map(formPill)}</div>
+            </details>
+          )}
         </nav>
       )}
 
@@ -126,7 +137,7 @@ export default async function LeadsPage({ searchParams }: PageProps<"/leads">) {
                     <th className="px-4 py-3">Received</th>
                     {cols.map((c) => (
                       <th key={c} className="px-4 py-3">
-                        {fieldLabel(c)}
+                        {fieldLabel(c, form.labels)}
                       </th>
                     ))}
                     <th className="px-4 py-3">Campaign</th>

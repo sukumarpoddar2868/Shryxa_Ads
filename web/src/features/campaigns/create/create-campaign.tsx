@@ -42,13 +42,19 @@ export function CreateCampaign({
   isAgency,
   initial = null,
   draftId = null,
+  defaultPrivacyUrl = "",
 }: {
   clients: ClientOption[];
   isAgency: boolean;
   initial?: Draft | null;
   draftId?: number | null;
+  /** Prefilled instant-form privacy link (Shryxa's own page); the user can replace it. */
+  defaultPrivacyUrl?: string;
 }) {
-  const [rawDraft, setDraft] = useState<Draft>(() => (initial ? normalizeDraft(initial) : initialDraft(clients.length === 1 ? clients[0] : null)));
+  const [rawDraft, setDraft] = useState<Draft>(() => {
+    const d = initial ? normalizeDraft(initial) : initialDraft(clients.length === 1 ? clients[0] : null);
+    return d.ad.leadForm.privacyUrl || !defaultPrivacyUrl ? d : { ...d, ad: { ...d.ad, leadForm: { ...d.ad.leadForm, privacyUrl: defaultPrivacyUrl } } };
+  });
   const draft = useMemo(() => normalizeDraft(rawDraft), [rawDraft]);
 
   // Autosave (text only) ~1.5 s after the last change, once a client is chosen.

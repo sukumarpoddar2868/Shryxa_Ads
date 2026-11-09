@@ -60,7 +60,7 @@ Migrations `web/supabase/migrations/` — **0001–0004 applied**. Tables: users
 - Limited-availability: Instagram-profile traffic ads. WhatsApp ads need the Page linked to a WhatsApp Business number. Custom audiences may need ToS acceptance (we return the link).
 - Lead forms are created with a **Page token** (`GET /{page}?fields=access_token`); rollback archives forms (they can't be deleted).
 - Dev-mode apps: Meta may reject ads with "creative created by an app in development mode" (#1885183) → app must be switched to **Live** (needs privacy URL, data-deletion URL, icon, category) — Standard Access still works for accounts with app roles.
-- **Nothing has been run against real Meta yet** (all tests used dummy tokens).
+- **Verified on real Meta (2026-11-10, app Live, Chaitali ad account 983561041272004):** Leads→WhatsApp and Leads→Instant form launched (paused), lead retrieval via Lead Ads Testing Tool, Meta location ids. Non-discrimination policy must be accepted on facebook.com (no API).
 
 ## Status
 1. ✅ Foundation · 2. ✅ Clients + Meta connect · 3. ✅ Campaign engine · 4. ✅ Create wizard (feature-complete, untested on real Meta).
@@ -79,6 +79,6 @@ Reviewers must see each permission used (ads_management/pages_manage_ads → cre
 - Explain simply; the user prefers short answers and screenshot-driven debugging.
 
 ## Next up
-1. **Full test with Meta test assets** (test user / test Page / sandbox ad account; admin "test token" connect on client page): Check with Meta → Launch paused for each route → Campaigns tab controls → Leads (Lead Ads Testing Tool) → Dashboard. Fix whatever Meta rejects.
-2. Add Razorpay keys + webhook, test checkout in Razorpay test mode.
-3. App Review submission.
+1. App Review (Advanced Access): reviewer demo Shryxa account, per-permission usage text, reviewer instructions, screencast script. Business verified, icon/category/contact/redirect set.
+2. Razorpay test-mode checkout test; USD plan once international cards approved.
+3. Remaining route tests (Traffic/website, Awareness, Engagement) + Campaigns-tab controls on a real campaign.

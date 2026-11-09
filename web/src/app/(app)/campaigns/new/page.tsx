@@ -5,6 +5,7 @@ import { Callout } from "@/components/ui/surface";
 import { CreateCampaign, type ClientOption } from "@/features/campaigns/create/create-campaign";
 import type { Draft } from "@/features/campaigns/create/blueprint";
 import { loadDraft } from "@/features/campaigns/store";
+import { metaConfigured, metaEnv } from "@/lib/env";
 
 export const metadata: Metadata = { title: "New campaign" };
 
@@ -44,6 +45,7 @@ export default async function NewCampaignPage({ searchParams }: PageProps<"/camp
         isAgency={user.accountType === "agency"}
         initial={(saved?.draft as Draft | undefined) ?? null}
         draftId={saved?.id ?? null}
+        defaultPrivacyUrl={metaConfigured() && metaEnv().APP_URL.startsWith("https://") ? `${metaEnv().APP_URL}/privacy` : ""}
       />
     </div>
   );

@@ -12,7 +12,8 @@ export { fieldLabel, leadColumns, leadsCsv, type Lead } from "./csv.ts";
  * Nothing is stored in Shryxa — Meta keeps leads for 90 days.
  */
 
-export type LeadForm = { id: string; name: string; status: string; leadsCount: number | null; created: string | null };
+/** `labels`: question key → the question text shown on the form ("q1" → "Date of your visit"). */
+export type LeadForm = { id: string; name: string; status: string; leadsCount: number | null; created: string | null; labels: Record<string, string> };
 
 
 type RawLead = {
@@ -50,15 +51,23 @@ async function pageToken(userId: number, clientId: number) {
 
 export async function listLeadForms(userId: number, clientId: number): Promise<LeadForm[]> {
   const { pageId, token } = await pageToken(userId, clientId);
-  const forms = await graphList<{ id: string; name?: string; status?: string; leads_count?: number; created_time?: string }>(
+  const forms = await graphList<{ id: string; name?: string; status?: string; leads_count?: number; created_time?: string; questions?: { key?: string; label?: string }[] }>(
     `${pageId}/leadgen_forms`,
     token,
-    { fields: "id,name,status,leads_count,created_time" },
+    { fields: "id,name,status,leads_count,created_time,questions{key,label}" },
     5,
   );
   return forms
-    .map((f) => ({ id: f.id, name: f.name ?? `Form ${f.id}`, status: f.status ?? "", leadsCount: f.leads_count ?? null, created: f.created_time ?? null }))
-    .sort((a, b) => (b.created ?? "").localeCompare(a.created ?? ""));
+    .map((f) => ({
+      id: f.id,
+      name: f.name ?? `Form ${f.id}`,
+      status: f.status ?? "",
+      leadsCount: f.leads_count ?? null,
+      created: f.created_time ?? null,
+      labels: Object.fromEntries((f.questions ?? []).filter((q) => q.key && q.label).map((q) => [q.key!, q.label!])),
+    }))
+    // Forms with leads first, then newest.
+    .sort((a, b) => Number((b.leadsCount ?? 0) > 0) - Number((a.leadsCount ?? 0) > 0) || (b.created ?? "").localeCompare(a.created ?? ""));
 }
 
 /** Leads for one form, newest first. The form must belong to the client's Page. */

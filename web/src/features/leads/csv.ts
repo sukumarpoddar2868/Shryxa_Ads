@@ -18,7 +18,8 @@ export function leadColumns(leads: Lead[]): string[] {
   return [...first.filter((k) => seen.has(k)), ...[...seen].filter((k) => !first.includes(k)).sort()];
 }
 
-export const fieldLabel = (k: string) => k.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+/** Column title: the form's own question text when known, else a tidied key. */
+export const fieldLabel = (k: string, labels: Record<string, string> = {}) => labels[k] ?? k.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
 
 /** CSV cell: quoted, and spreadsheet formulas neutralised. */
 export function csvCell(v: string): string {
@@ -26,9 +27,9 @@ export function csvCell(v: string): string {
   return `"${safe.replace(/"/g, '""')}"`;
 }
 
-export function leadsCsv(leads: Lead[]): string {
+export function leadsCsv(leads: Lead[], labels: Record<string, string> = {}): string {
   const cols = leadColumns(leads);
-  const header = ["Created", ...cols.map(fieldLabel), "Campaign", "Ad", "Platform", "Organic", "Lead id"];
+  const header = ["Created", ...cols.map((c) => fieldLabel(c, labels)), "Campaign", "Ad", "Platform", "Organic", "Lead id"];
   const rows = leads.map((l) => [l.created, ...cols.map((c) => l.fields[c] ?? ""), l.campaignName ?? "", l.adName ?? "", l.platform ?? "", l.isOrganic ? "yes" : "no", l.id]);
   return "﻿" + [header, ...rows].map((r) => r.map(csvCell).join(",")).join("\r\n") + "\r\n";
 }
