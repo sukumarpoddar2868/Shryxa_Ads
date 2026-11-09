@@ -12,7 +12,7 @@ import { REACH_SCOPES, SCOPE_INFO } from "../ai/prompts.ts";
 import { OBJECTIVE_OPTIONS, defaultCta, defaultDestination, destinationOptions, type ObjectiveId } from "./blueprint";
 import { DestinationDetails } from "./destination-details";
 import type { SectionProps } from "./create-campaign";
-import { ChipInput, ChoiceCard, Group, Header, Planned, Segmented, TextArea, set } from "./sections";
+import { ChipInput, ChoiceCard, Group, Header, Segmented, TextArea, set } from "./sections";
 
 /**
  * Start: goal (objective) → destination → about the business → customers →
@@ -305,7 +305,6 @@ export function StartSection({ draft, update, clients, isAgency, goTo }: Section
           </div>
         </div>
       </div>
-      <Planned id="start" />
     </>
   );
 }

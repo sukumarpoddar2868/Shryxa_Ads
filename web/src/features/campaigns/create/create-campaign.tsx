@@ -20,6 +20,7 @@ export type ClientOption = {
   adAccountName: string | null;
   pageName: string | null;
   instagramUsername: string | null;
+  pageId: string | null;
   /** Connected Pixel (needed for Sales / website leads). */
   hasPixel: boolean;
   pixelId: string | null;

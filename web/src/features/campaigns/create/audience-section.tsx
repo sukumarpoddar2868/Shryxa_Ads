@@ -13,7 +13,7 @@ import { DEVICE_LABELS, type DeviceOs, type DraftPin } from "./blueprint";
 import type { SectionProps } from "./create-campaign";
 import { AudienceEstimate } from "./audience-estimate";
 import { AudienceTargeting } from "./audience-targeting";
-import { ChipInput, ChoiceCard, Group, Header, Planned, Segmented, set } from "./sections";
+import { ChipInput, ChoiceCard, Group, Header, Segmented, set } from "./sections";
 
 // Map is browser-only (WebGL); loads after the page.
 const AreaMap = dynamic(() => import("./area-map"), {
@@ -245,7 +245,6 @@ export function AudienceSection({ draft, update, goTo, clients }: SectionProps) 
           </div>
         </Group>
       </div>
-      <Planned id="audience" />
     </>
   );
 }

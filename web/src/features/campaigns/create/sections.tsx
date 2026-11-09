@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, type ReactNode } from "react";
-import { Lock, Sparkles, Wrench, X } from "lucide-react";
+import { Lock, Sparkles, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Field, Input, Select, inputClass } from "@/components/ui/field";
 import { Callout, Chip } from "@/components/ui/surface";
@@ -16,7 +16,7 @@ import { DestinationDetails } from "./destination-details";
 import { MediaSlot } from "../media/media-slot";
 import { ctaLabel } from "./ad-preview";
 import { MEDIA_RULES } from "../media/rules";
-import { CAROUSEL_MIN, DESTINATION_LABELS, audienceReady, PLANNED, cardReady, destinationReady, leadFormReady, mediaReady, type AdFormat, type Draft, type SectionId } from "./blueprint";
+import { CAROUSEL_MIN, DESTINATION_LABELS, audienceReady, cardReady, destinationReady, leadFormReady, mediaReady, type AdFormat, type Draft, type SectionId } from "./blueprint";
 import type { SectionProps } from "./create-campaign";
 
 /* ------------------------------------------------------------------ shared */
@@ -28,27 +28,6 @@ export function Header({ level, title, blurb }: { level: string; title: string; 
       <h2 className="mt-1 text-[24px] font-extrabold leading-tight">{title}</h2>
       <p className="mt-1 max-w-2xl text-[15px] text-ink-muted">{blurb}</p>
     </header>
-  );
-}
-
-/** "What this module becomes" — the blueprint's to-build list. */
-export function Planned({ id }: { id: SectionId }) {
-  const items = PLANNED[id];
-  if (!items?.length) return null;
-  return (
-    <section aria-label="Planned for this step" className="mt-8 rounded-card bg-lavender-soft p-5">
-      <p className="flex items-center gap-2 text-[13px] font-bold">
-        <Wrench className="size-4" aria-hidden /> Coming to this step
-      </p>
-      <ul className="mt-2 grid gap-1.5 text-[14px] text-ink-muted sm:grid-cols-2">
-        {items.map((t) => (
-          <li key={t} className="flex gap-2">
-            <span aria-hidden className="mt-2 size-1.5 shrink-0 rounded-full bg-lavender-deep" />
-            {t}
-          </li>
-        ))}
-      </ul>
-    </section>
   );
 }
 
@@ -336,7 +315,6 @@ export function NameBudgetSection({ draft, update, clients }: SectionProps) {
           </div>
         </div>
       )}
-      <Planned id="name-budget" />
     </>
   );
 }
@@ -396,7 +374,6 @@ export function PlacementsSection({ draft, update, goTo }: SectionProps) {
           </Group>
         )}
       </div>
-      <Planned id="placements" />
     </>
   );
 }
@@ -542,7 +519,6 @@ export function CreativeSection({ draft, update, clients, goTo }: SectionProps) 
           </Field>
         </Group>
       </div>
-      <Planned id="creative" />
     </>
   );
 }
@@ -602,7 +578,6 @@ export function ReviewSection({ draft, update, clients, goTo, draftId }: Section
         ))}
       </ul>
       <LaunchPanel draft={draft} update={update} clients={clients} ready={allOk} draftId={draftId} />
-      <Planned id="review" />
     </>
   );
 }

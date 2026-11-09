@@ -24,6 +24,7 @@ export default async function NewCampaignPage({ searchParams }: PageProps<"/camp
       adAccountName: c.ad_account_name,
       pageName: c.page_name,
       instagramUsername: c.instagram_username,
+      pageId: c.page_id,
       hasPixel: Boolean(c.pixel_id),
       pixelId: c.pixel_id,
       pixelName: c.pixel_name,

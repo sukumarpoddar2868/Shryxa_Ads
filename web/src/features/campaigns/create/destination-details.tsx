@@ -1,5 +1,7 @@
 "use client";
 
+
+import { ExternalLink } from "lucide-react";
 import { buttonClass } from "@/components/ui/button";
 import { Field, Input, Select } from "@/components/ui/field";
 import { Callout } from "@/components/ui/surface";
@@ -8,6 +10,12 @@ import { waLink } from "../whatsapp/links";
 import { PixelSetup } from "./pixel-setup";
 import { cleanPhone, isPhone, type Draft } from "./blueprint";
 import type { ClientOption, SectionProps } from "./create-campaign";
+
+/** Where a Page links its WhatsApp number (needed for click-to-WhatsApp ads). */
+const LINK_WHATSAPP = {
+  businessSuite: (pageId: string) => `https://business.facebook.com/latest/settings/whatsapp_account?asset_id=${pageId}`,
+  facebook: "https://www.facebook.com/settings/?tab=linked_whatsapp",
+};
 
 const EVENT_LABELS: Record<ConversionEvent, string> = {
   PURCHASE: "Purchase",
@@ -92,8 +100,18 @@ export function DestinationDetails({
             </div>
           </Field>
           <Callout>
-            <strong>One-time setup:</strong> link this number to the client&apos;s Facebook Page (Page settings → Linked accounts → WhatsApp). Meta uses that link for chat ads. You
-            set the greeting and the customer&apos;s message in <strong>Creative</strong>.
+            <strong>One-time setup:</strong> link this number to {client?.pageName ? <strong>{client.pageName}</strong> : "the Facebook Page"} — Meta needs that link for WhatsApp ads.
+            You set the greeting and the customer&apos;s message in <strong>Creative</strong>.
+            <span className="mt-3 flex flex-wrap gap-2">
+              {client?.pageId && (
+                <a href={LINK_WHATSAPP.businessSuite(client.pageId)} target="_blank" rel="noreferrer" className={buttonClass({ variant: "secondary", size: "sm" })}>
+                  Link in Business Suite <ExternalLink className="size-3.5" aria-hidden />
+                </a>
+              )}
+              <a href={LINK_WHATSAPP.facebook} target="_blank" rel="noreferrer" className={buttonClass({ variant: "ghost", size: "sm" })}>
+                Page settings on Facebook <ExternalLink className="size-3.5" aria-hidden />
+              </a>
+            </span>
           </Callout>
           {website("Website", "Helps the AI write better copy.")}
         </div>

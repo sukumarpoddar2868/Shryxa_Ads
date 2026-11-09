@@ -328,30 +328,3 @@ export function sectionComplete(id: SectionId, d: Draft): boolean {
   }
 }
 
-/** What each module grows into later (from the targeting research). */
-export const PLANNED: Partial<Record<SectionId, string[]>> = {
-  start: [
-    "Awareness, Engagement and Sales objectives",
-    "WhatsApp and phone-call destinations",
-    "Remember each client's business description for next time",
-    "Upload a brochure or link the website for the AI to read",
-    "Saved templates agencies can reuse across clients",
-  ],
-  "name-budget": [
-    "Budget guidance per city and objective",
-    "Campaign budget (Advantage+) vs ad set budget",
-    "Ad scheduling (dayparting)",
-  ],
-  audience: [
-    "More custom audiences: lead-form openers, video viewers, WhatsApp chatters",
-  ],
-  placements: ["Per-position control (Feed, Stories, Reels, right column)", "Placement preview per position"],
-  creative: [
-    "Crop / trim editor for images and video",
-    "Rewrite / more variations of the AI copy",
-    "WhatsApp, call and Messenger destinations",
-    "A/B variants (two images or two headlines)",
-    "Live mockups for Feed, Stories and Reels",
-  ],
-  review: ["Save drafts and launched campaigns in Shryxa", "Ad-account readiness (payment method, status) before launch"],
-};
