@@ -1,7 +1,8 @@
 "use client";
 
-import { useState, useMemo } from "react";
-import { ArrowLeft, ArrowRight, Check } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { ArrowLeft, ArrowRight, Check, CloudOff, Loader2 } from "lucide-react";
+import { saveDraftAction } from "../draft-actions";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/surface";
 import { cn } from "@/lib/cn";
@@ -31,20 +32,73 @@ export type SectionProps = {
   update: (fn: (d: Draft) => Draft) => void;
   clients: ClientOption[];
   goTo: (id: SectionId) => void;
+  /** Saved draft row id (null until the first autosave). */
+  draftId: number | null;
 };
 
-export function CreateCampaign({ clients, isAgency }: { clients: ClientOption[]; isAgency: boolean }) {
-  const [rawDraft, setDraft] = useState<Draft>(() => initialDraft(clients.length === 1 ? clients[0] : null));
+export function CreateCampaign({
+  clients,
+  isAgency,
+  initial = null,
+  draftId = null,
+}: {
+  clients: ClientOption[];
+  isAgency: boolean;
+  initial?: Draft | null;
+  draftId?: number | null;
+}) {
+  const [rawDraft, setDraft] = useState<Draft>(() => (initial ? normalizeDraft(initial) : initialDraft(clients.length === 1 ? clients[0] : null)));
   const draft = useMemo(() => normalizeDraft(rawDraft), [rawDraft]);
+
+  // Autosave (text only) ~1.5 s after the last change, once a client is chosen.
+  const idRef = useRef<number | null>(draftId);
+  const lastSaved = useRef<string>(initial ? JSON.stringify(draft) : "");
+  const [save, setSave] = useState<{ status: "idle" | "saving" | "saved" | "error"; error?: string; id: number | null }>({
+    status: draftId ? "saved" : "idle",
+    id: draftId,
+  });
+  useEffect(() => {
+    if (!draft.clientId || draft.launched) return;
+    const json = JSON.stringify(draft);
+    if (json === lastSaved.current) return;
+    const t = setTimeout(async () => {
+      setSave((s) => ({ ...s, status: "saving" }));
+      const r = await saveDraftAction(idRef.current, draft).catch(() => ({ ok: false as const, error: "Couldn't reach the server." }));
+      if (!r.ok) return setSave((s) => ({ ...s, status: "error", error: r.error }));
+      lastSaved.current = json;
+      idRef.current = r.id;
+      setSave({ status: "saved", id: r.id });
+      if (new URLSearchParams(window.location.search).get("draft") !== String(r.id)) window.history.replaceState(null, "", `/campaigns/new?draft=${r.id}`);
+    }, 1500);
+    return () => clearTimeout(t);
+  }, [draft]);
   const [active, setActive] = useState<SectionId>("start");
   const update = (fn: (d: Draft) => Draft) => setDraft((d) => fn(normalizeDraft(d)));
 
   const idx = SECTION_ORDER.indexOf(active);
   const prev = SECTION_ORDER[idx - 1];
   const next = SECTION_ORDER[idx + 1];
-  const props: SectionProps = { draft, update, clients, goTo: setActive };
+  const props: SectionProps = { draft, update, clients, goTo: setActive, draftId: save.id };
 
   return (
+    <div className="flex flex-col gap-3">
+    <p role="status" aria-live="polite" className="flex items-center gap-1.5 self-end text-[12px] text-ink-muted">
+      {draft.launched ? null : save.status === "saving" ? (
+        <>
+          <Loader2 className="size-3.5 animate-spin" aria-hidden /> Saving draft…
+        </>
+      ) : save.status === "saved" ? (
+        <>
+          <Check className="size-3.5" aria-hidden /> Draft saved
+        </>
+      ) : save.status === "error" ? (
+        <span className="flex items-center gap-1.5 text-tomato-700">
+          <CloudOff className="size-3.5" aria-hidden /> Not saved: {save.error}
+        </span>
+      ) : draft.clientId ? null : (
+        "Drafts save automatically once you choose a client"
+      )}
+    </p>
     <div className="grid grid-cols-[minmax(0,1fr)] gap-6 lg:grid-cols-[220px_minmax(0,1fr)] xl:grid-cols-[220px_minmax(0,1fr)_340px]">
       {/* Meta-style structure rail */}
       <nav aria-label="Campaign steps" className="min-w-0 lg:sticky lg:top-10 lg:self-start">
@@ -132,6 +186,7 @@ export function CreateCampaign({ clients, isAgency }: { clients: ClientOption[];
           <Summary draft={draft} clients={clients} />
         )}
       </aside>
+    </div>
     </div>
   );
 }

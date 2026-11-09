@@ -560,7 +560,7 @@ const DESTINATION_CHECK: Record<Draft["ad"]["destination"], string> = {
   none: "Reach campaign — no destination needed",
 };
 
-export function ReviewSection({ draft, update, clients, goTo }: SectionProps) {
+export function ReviewSection({ draft, update, clients, goTo, draftId }: SectionProps) {
   const checks: { id: SectionId; label: string; ok: boolean }[] = [
     { id: "start", label: "Goal chosen and campaign drafted with AI", ok: draft.objective !== null && draft.generated },
     { id: "name-budget", label: "Name and budget set", ok: draft.campaign.name.trim() !== "" && Number(draft.campaign.amount) > 0 },
@@ -601,7 +601,7 @@ export function ReviewSection({ draft, update, clients, goTo }: SectionProps) {
           </li>
         ))}
       </ul>
-      <LaunchPanel draft={draft} update={update} clients={clients} ready={allOk} />
+      <LaunchPanel draft={draft} update={update} clients={clients} ready={allOk} draftId={draftId} />
       <Planned id="review" />
     </>
   );

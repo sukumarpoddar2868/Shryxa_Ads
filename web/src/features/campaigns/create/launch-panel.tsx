@@ -9,7 +9,7 @@ import type { ClientOption, SectionProps } from "./create-campaign";
 import { toLaunchPayload } from "./launch-payload";
 
 /** Review → "Check with Meta" (validate only) and "Launch paused" (creates it). */
-export function LaunchPanel({ draft, update, clients, ready }: Pick<SectionProps, "draft" | "update" | "clients"> & { ready: boolean }) {
+export function LaunchPanel({ draft, update, clients, ready, draftId }: Pick<SectionProps, "draft" | "update" | "clients" | "draftId"> & { ready: boolean }) {
   const [pending, start] = useTransition();
   const [running, setRunning] = useState<"validate" | "live" | null>(null);
   const [result, setResult] = useState<LaunchActionResult | null>(null);
@@ -25,7 +25,7 @@ export function LaunchPanel({ draft, update, clients, ready }: Pick<SectionProps
     setRunning(mode);
     start(async () => {
       try {
-        const r = await launchDraftAction(payload, mode);
+        const r = await launchDraftAction(payload, mode, draftId);
         setResult(r);
         if (r.ok && mode === "live" && r.campaignId) {
           update((d) => ({ ...d, launched: { campaignId: r.campaignId!, adsManagerUrl: r.adsManagerUrl ?? null } }));

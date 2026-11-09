@@ -114,6 +114,29 @@ export type MetaOAuthPendingRow = {
   expires_at: string;
 };
 
+/** 0004 · Campaigns created in Shryxa: drafts + launched (text only, no media). */
+export type CampaignRow = {
+  id: number;
+  user_id: number;
+  client_id: number;
+  state: "draft" | "launched";
+  name: string;
+  objective: string | null;
+  destination: string | null;
+  currency: string | null;
+  budget_type: "daily" | "lifetime" | null;
+  budget_minor: number | null;
+  meta_campaign_id: string | null;
+  meta_adset_id: string | null;
+  meta_ad_id: string | null;
+  meta_form_id: string | null;
+  summary: Record<string, unknown>;
+  draft: unknown;
+  created_at: string;
+  updated_at: string;
+  launched_at: string | null;
+};
+
 export type Database = {
   public: {
     Tables: {
@@ -125,6 +148,7 @@ export type Database = {
       meta_oauth_states: Row<MetaOAuthStateRow>;
       meta_oauth_pending: Row<MetaOAuthPendingRow>;
       client_invites: Row<ClientInviteRow>;
+      campaigns: Row<CampaignRow>;
     };
     Views: Record<string, never>;
     Functions: Record<string, never>;

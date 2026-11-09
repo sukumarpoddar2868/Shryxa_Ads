@@ -10,6 +10,7 @@ import { CTA_TYPES } from "./engine/schema.ts";
 import { CONVERSION_EVENTS, CTA_FOR, CURRENCIES, DESTINATIONS } from "./engine/presets.ts";
 import { launchCampaign, type LaunchInput } from "./launch";
 import { pushImage, pushVideo } from "./media/push";
+import { recordLaunch, removeMedia } from "./store";
 import { createItemToken, itemUrl } from "./whatsapp/item-link";
 import { itemMessage, waDigits, waLink } from "./whatsapp/links";
 
@@ -161,7 +162,7 @@ function problems(p: z.output<typeof LaunchPayload>): string[] {
  * (media stays local). "live": media → Meta, then lead form → campaign →
  * ad set → ad, all PAUSED; partial failures are rolled back.
  */
-export async function launchDraftAction(raw: LaunchPayload, mode: "validate" | "live"): Promise<LaunchActionResult> {
+export async function launchDraftAction(raw: LaunchPayload, mode: "validate" | "live", draftId: number | null = null): Promise<LaunchActionResult> {
   const user = await requireUser();
   const fail = (message: string, issues?: string[]): LaunchActionResult => ({ ok: false, mode, message, issues, steps: [] });
 
@@ -294,6 +295,26 @@ export async function launchDraftAction(raw: LaunchPayload, mode: "validate" | "
   if (!outcome.ok) return { ok: false, mode, message: outcome.error, issues: outcome.issues, steps, cleanup };
 
   const ids = outcome.result.ids;
+  if (mode === "live") {
+    // Remember it in Shryxa (text only), then free Storage: Meta has its own copy of the media.
+    await recordLaunch(
+      user.id,
+      draftId && Number.isSafeInteger(draftId) ? draftId : null,
+      {
+        clientId: p.clientId,
+        objective: perItem ? "OUTCOME_TRAFFIC" : p.objective,
+        campaign: { name: p.campaign.name, currency: p.campaign.currency, budgetType: p.campaign.budgetType, amount: p.campaign.amount },
+        audience: { locations: p.audience.pins, type: p.audience.include.length ? "custom" : "core" },
+        ad: { destination: perItem ? "whatsapp" : p.ad.destination, format: p.ad.format, headline: p.ad.headline, cta: p.ad.cta, carousel: { cards: p.ad.cards } },
+      },
+      ids,
+    ).catch(() => {});
+    // Per-item WhatsApp links show the card pictures from Storage — keep those.
+    if (!perItem) {
+      const m = p.ad.media;
+      await removeMedia(user.id, [m.feed, m.portrait, m.story, m.video, m.videoCover, ...p.ad.cards.map((c) => c.imagePath)].filter(Boolean) as string[]).catch(() => {});
+    }
+  }
   return {
     ok: true,
     mode,
