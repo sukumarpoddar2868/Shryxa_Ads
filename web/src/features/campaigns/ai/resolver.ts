@@ -1,5 +1,6 @@
 import "server-only";
 import { groqJson } from "@/lib/ai/groq";
+import { resolvePicks } from "../geo/resolve.ts";
 import type { Currency, Destination } from "../engine/presets.ts";
 import type { CtaType } from "../engine/schema.ts";
 import {
@@ -16,30 +17,34 @@ import {
   type ReachScope,
 } from "./prompts.ts";
 
-/** City names → pins (lat/lng/radius + reason). Retries once on a bad answer. */
+/**
+ * City names → target areas. The AI only names places; Meta's location list
+ * and OpenStreetMap supply ids and coordinates (see geo/resolve.ts).
+ */
 export async function resolveLocations(p: {
   cities: string[];
   businessName: string;
   about: string;
   country: string;
+  countryIso: string;
   scope: ReachScope;
-}): Promise<Pin[]> {
+  token: string | null;
+}): Promise<{ pins: Pin[]; notes: string[] }> {
   const prompt = locationPrompt(p);
-  let lastError = "";
-  for (let attempt = 0; attempt < 2; attempt++) {
+  let picks: { area: string; city: string; state: string; why: string }[] | null = null;
+  for (let attempt = 0; attempt < 2 && !picks; attempt++) {
     try {
-      const parsed = LocationGuess.safeParse(JSON.parse(await groqJson(prompt, { maxTokens: 4096, temperature: 0.1 })));
-      if (!parsed.success) {
-        lastError = "unexpected answer format";
-        continue;
-      }
-      // A count slightly off from expectedPins() is fine — the user can edit pins.
-      return parsed.data.cities;
-    } catch (e) {
-      lastError = e instanceof Error ? e.message : "unknown error";
+      const parsed = LocationGuess.safeParse(JSON.parse(await groqJson(prompt, { maxTokens: 3000, temperature: 0.1 })));
+      if (parsed.success) picks = parsed.data.picks;
+    } catch {
+      // retry
     }
   }
-  throw new Error(`Couldn't work out the locations (${lastError}). Try again, or check the city names.`);
+  // AI unavailable → still resolve the typed cities directly.
+  picks ??= p.cities.map((c) => ({ area: c, city: c, state: "", why: "" }));
+  const r = await resolvePicks(p.token, picks, p.scope, p.countryIso);
+  if (!r.areas.length) throw new Error(r.notes[0] ?? "Couldn't find those cities. Check the spelling, or add areas on the map.");
+  return { pins: r.areas.map((a) => ({ ...a, why: a.why })), notes: r.notes };
 }
 
 /** Ad copy + campaign basics. Validated, retried once, then a safe fallback. */

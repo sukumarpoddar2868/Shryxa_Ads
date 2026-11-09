@@ -27,7 +27,10 @@ export type AdCopy = {
   interest_targeting?: (string | { id: string; name?: string })[];
 };
 
-export type Epicenter = { lat: number; lng: number; radius_km: number };
+/** A Meta location id (exact area Meta draws) instead of a lat/lng circle. */
+export type GeoRef = { kind: "city" | "neighborhood" | "subcity" | "zip"; key: string };
+/** One target area. With `geo` Meta targets its own id; lat/lng are then for the map only. */
+export type Epicenter = { lat: number; lng: number; radius_km: number; geo?: GeoRef | null };
 
 export type RenderInput = {
   /** The client's saved Meta assets. `ad_account_id` may carry `act_`. */
@@ -201,12 +204,25 @@ export function renderSpec(input: RenderInput): CampaignSpecInput {
   // Meta rejects country + custom circles as overlapping → one or the other.
   const geo: JsonObject = { location_types: ["home", "recent"] };
   if (input.epicenters.length) {
-    geo.custom_locations = input.epicenters.map((e) => ({
-      latitude: Number(e.lat),
-      longitude: Number(e.lng),
-      radius: Number(e.radius_km),
-      distance_unit: "kilometer",
-    }));
+    const byKind = (k: GeoRef["kind"]) => input.epicenters.filter((e) => e.geo?.kind === k).map((e) => e.geo!.key);
+    const cities = input.epicenters
+      .filter((e) => e.geo?.kind === "city")
+      // City + radius only in Meta's allowed 17–80 km band; otherwise just the city itself.
+      .map((e): JsonObject => (e.radius_km >= 17 ? { key: e.geo!.key, radius: Math.min(80, Number(e.radius_km)), distance_unit: "kilometer" } : { key: e.geo!.key }));
+    if (cities.length) geo.cities = cities;
+    for (const [field, kind] of [["neighborhoods", "neighborhood"], ["subcities", "subcity"], ["zips", "zip"]] as const) {
+      const keys = [...new Set(byKind(kind))];
+      if (keys.length) geo[field] = keys.map((key) => ({ key }));
+    }
+    const pins = input.epicenters.filter((e) => !e.geo);
+    if (pins.length) {
+      geo.custom_locations = pins.map((e) => ({
+        latitude: Number(e.lat),
+        longitude: Number(e.lng),
+        radius: Number(e.radius_km),
+        distance_unit: "kilometer",
+      }));
+    }
   } else {
     geo.countries = [countryIso];
   }

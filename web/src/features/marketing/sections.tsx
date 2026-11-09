@@ -232,7 +232,7 @@ export function HowItWorks() {
     { n: "01", title: "Add a client", body: "Create a client and let them connect their own Meta account in one secure click.", tone: "bg-paper" },
     { n: "02", title: "Brief in plain words", body: "Tell us the offer, the city and who it's for. AI drafts the copy; we map the reach.", tone: "bg-chartreuse" },
     { n: "03", title: "Preview everywhere", body: "See the ad in Feed, Stories, Reels, right column and Instant Form before anything goes out.", tone: "bg-paper" },
-    { n: "04", title: "Launch paused, go live", body: "The campaign is created paused. Review it, then flip it live — or pause anytime from the dashboard.", tone: "bg-tomato" },
+    { n: "04", title: "Launch or keep paused", body: "Launch it live, or create it paused and turn it on later. Pause, edit the budget or stop it anytime from Campaigns.", tone: "bg-tomato" },
   ];
   return (
     <section id="how" className="relative scroll-mt-16 overflow-hidden bg-lavender py-24 md:py-32">

@@ -126,7 +126,10 @@ export type DeviceOs = "all" | "android" | "ios";
 export const DEVICE_LABELS: Record<DeviceOs, string> = { all: "All phones", android: "Android", ios: "iPhone" };
 
 /** A target circle. AI-made pins carry a one-line reason. */
-export type DraftPin = { name: string; lat: number; lng: number; radiusKm: number; why: string };
+/** A Meta location id. With it Meta targets its own area; lat/lng are only for the map. */
+export type GeoRef = { kind: "city" | "neighborhood" | "subcity" | "zip"; key: string };
+/** One target area: a Meta id (`geo`) or a circle around lat/lng (`geo` null). */
+export type DraftPin = { name: string; lat: number; lng: number; radiusKm: number; why: string; geo?: GeoRef | null };
 
 export type DestinationOption = { id: Destination; label: string; blurb: string; available: boolean; note?: string };
 
@@ -204,7 +207,7 @@ export type Draft = {
   /** True once the AI has filled the campaign; every field stays editable. */
   generated: boolean;
   /** Set after a successful live launch (prevents launching twice). */
-  launched: { campaignId: string; adsManagerUrl: string | null } | null;
+  launched: { campaignId: string; adsManagerUrl: string | null; active?: boolean } | null;
   campaign: {
     name: string;
     budgetType: "daily" | "lifetime";

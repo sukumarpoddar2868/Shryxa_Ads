@@ -1,21 +1,15 @@
 "use client";
 
 
-import { ExternalLink } from "lucide-react";
 import { buttonClass } from "@/components/ui/button";
 import { Field, Input, Select } from "@/components/ui/field";
 import { Callout } from "@/components/ui/surface";
 import { CONVERSION_EVENTS, type ConversionEvent } from "../engine/presets.ts";
-import { waLink } from "../whatsapp/links";
 import { PixelSetup } from "./pixel-setup";
+import { WhatsAppLinkCheck } from "./whatsapp-link-check";
 import { cleanPhone, isPhone, type Draft } from "./blueprint";
 import type { ClientOption, SectionProps } from "./create-campaign";
 
-/** Where a Page links its WhatsApp number (needed for click-to-WhatsApp ads). */
-const LINK_WHATSAPP = {
-  businessSuite: (pageId: string) => `https://business.facebook.com/latest/settings/whatsapp_account?asset_id=${pageId}`,
-  facebook: "https://www.facebook.com/settings/?tab=linked_whatsapp",
-};
 
 const EVENT_LABELS: Record<ConversionEvent, string> = {
   PURCHASE: "Purchase",
@@ -78,7 +72,7 @@ export function DestinationDetails({
             error={phoneBad(draft.ad.whatsappNumber)}
             hint="Where leads arrive. Use the number of your WhatsApp Business app, with country code."
           >
-            <div className="flex gap-2">
+            <WhatsAppLinkCheck clientId={client?.id ?? null} pageName={client?.pageName ?? null} number={draft.ad.whatsappNumber} valid={isPhone(draft.ad.whatsappNumber)}>
               <Input
                 id="wa"
                 inputMode="tel"
@@ -88,31 +82,8 @@ export function DestinationDetails({
                 onChange={(e) => setAd({ whatsappNumber: e.target.value })}
                 onBlur={(e) => isPhone(e.target.value) && setAd({ whatsappNumber: cleanPhone(e.target.value) })}
               />
-              <a
-                href={isPhone(draft.ad.whatsappNumber) ? waLink(draft.ad.whatsappNumber, "Test from Shryxa Ads") : undefined}
-                target="_blank"
-                rel="noreferrer"
-                aria-disabled={!isPhone(draft.ad.whatsappNumber)}
-                className={buttonClass({ variant: "secondary" }, !isPhone(draft.ad.whatsappNumber) ? "pointer-events-none opacity-50" : undefined)}
-              >
-                Test
-              </a>
-            </div>
+            </WhatsAppLinkCheck>
           </Field>
-          <Callout>
-            <strong>One-time setup:</strong> link this number to {client?.pageName ? <strong>{client.pageName}</strong> : "the Facebook Page"} — Meta needs that link for WhatsApp ads.
-            You set the greeting and the customer&apos;s message in <strong>Creative</strong>.
-            <span className="mt-3 flex flex-wrap gap-2">
-              {client?.pageId && (
-                <a href={LINK_WHATSAPP.businessSuite(client.pageId)} target="_blank" rel="noreferrer" className={buttonClass({ variant: "secondary", size: "sm" })}>
-                  Link in Business Suite <ExternalLink className="size-3.5" aria-hidden />
-                </a>
-              )}
-              <a href={LINK_WHATSAPP.facebook} target="_blank" rel="noreferrer" className={buttonClass({ variant: "ghost", size: "sm" })}>
-                Page settings on Facebook <ExternalLink className="size-3.5" aria-hidden />
-              </a>
-            </span>
-          </Callout>
           {website("Website", "Helps the AI write better copy.")}
         </div>
       );

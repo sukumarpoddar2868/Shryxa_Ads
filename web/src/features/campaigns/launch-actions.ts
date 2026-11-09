@@ -35,7 +35,7 @@ const LaunchPayload = z.object({
     frequencyCap: z.number().int().min(1).max(10).optional(),
   }),
   audience: z.object({
-    pins: z.array(z.object({ lat: z.number(), lng: z.number(), radiusKm: z.number().min(1).max(80) })).min(1, "Add at least one area.").max(30),
+    pins: z.array(z.object({ lat: z.number(), lng: z.number(), radiusKm: z.number().min(1).max(80), geo: z.object({ kind: z.enum(["city", "neighborhood", "subcity", "zip"]), key: z.string().regex(/^[A-Za-z0-9:_-]{1,40}$/) }).nullish() })).min(1, "Add at least one area.").max(30),
     ageMin: z.number().int().min(18).max(65),
     ageMax: z.number().int().min(18).max(65),
     gender: z.enum(["any", "female", "male"]),
@@ -103,7 +103,33 @@ export type LaunchActionResult = {
   adsManagerUrl?: string;
   cleanup?: string[];
   note?: string;
+  /** Live launch went out switched on (not paused). */
+  active?: boolean;
+  /** A one-time account step Meta asks for, with the page that does it. */
+  fix?: { title: string; body: string; url: string; label: string };
 };
+
+/** Meta errors the advertiser fixes once on Facebook (not in Shryxa). */
+function knownFix(message: string | undefined): LaunchActionResult["fix"] {
+  const m = (message ?? "").toLowerCase();
+  if (m.includes("non-discrimination") || m.includes("nondiscrimination") || m.includes("2859002")) {
+    return {
+      title: "One-time step: accept Meta's Non-discrimination Policy",
+      body: "Meta asks every advertiser to accept it once per ad account before ads can run. Open the page as the ad account's admin, accept, then press Launch or Pause again.",
+      url: "https://www.facebook.com/certification/nondiscrimination",
+      label: "Accept on Facebook",
+    };
+  }
+  if (m.includes("payment method") || m.includes("funding source") || m.includes("billing")) {
+    return {
+      title: "Add a payment method to the ad account",
+      body: "Meta needs a card or UPI on the ad account before ads can run. Add it in Billing, then try again.",
+      url: "https://business.facebook.com/billing_hub/payment_settings/",
+      label: "Open Meta billing",
+    };
+  }
+  return undefined;
+}
 
 /** A Pixel counts as working if it fired in the last 30 days. */
 async function pixelStatus(token: string, pixelId: string): Promise<{ ok: true } | { ok: false; message: string }> {
@@ -163,9 +189,15 @@ function problems(p: z.output<typeof LaunchPayload>): string[] {
 /**
  * Review step. "validate": Meta checks the campaign without creating anything
  * (media stays local). "live": media → Meta, then lead form → campaign →
- * ad set → ad, all PAUSED; partial failures are rolled back.
+ * ad set → ad, PAUSED or ACTIVE as chosen; partial failures are rolled back.
  */
-export async function launchDraftAction(raw: LaunchPayload, mode: "validate" | "live", draftId: number | null = null): Promise<LaunchActionResult> {
+export async function launchDraftAction(
+  raw: LaunchPayload,
+  mode: "validate" | "live",
+  draftId: number | null = null,
+  statusRaw: "PAUSED" | "ACTIVE" = "PAUSED",
+): Promise<LaunchActionResult> {
+  const status = statusRaw === "ACTIVE" ? "ACTIVE" : "PAUSED";
   const user = await requireUser();
   const fail = (message: string, issues?: string[]): LaunchActionResult => ({ ok: false, mode, message, issues, steps: [] });
 
@@ -258,7 +290,7 @@ export async function launchDraftAction(raw: LaunchPayload, mode: "validate" | "
       gender: p.audience.gender,
       interest_targeting: interests,
     },
-    epicenters: p.audience.pins.map((x) => ({ lat: x.lat, lng: x.lng, radius_km: x.radiusKm })),
+    epicenters: p.audience.pins.map((x) => ({ lat: x.lat, lng: x.lng, radius_km: x.radiusKm, geo: x.geo ?? null })),
     dailyBudget: p.campaign.amount,
     budgetType: p.campaign.budgetType,
     campaignName: p.campaign.name,
@@ -274,7 +306,7 @@ export async function launchDraftAction(raw: LaunchPayload, mode: "validate" | "
     language: p.audience.language,
     startDate: p.campaign.startDate ?? null,
     endDate: p.campaign.endDate ?? null,
-    launchStatus: "PAUSED",
+    launchStatus: status,
     advantageAudience: p.audience.advantage,
     deviceOs: p.audience.device,
     audiences: p.audience.include.length || p.audience.exclude.length ? { include: p.audience.include, exclude: p.audience.exclude } : null,
@@ -302,7 +334,7 @@ export async function launchDraftAction(raw: LaunchPayload, mode: "validate" | "
   const steps: LaunchStepView[] = (outcome.result?.steps ?? []).map((s) => ({ label: STEP_LABEL[s.resourceType], id: s.id, error: s.error }));
   const cleanup = outcome.result?.cleanup?.map((c) => `${STEP_LABEL[c.resourceType]} ${c.id}: ${c.deleted ? "deleted" : `not deleted (${c.error})`}`);
 
-  if (!outcome.ok) return { ok: false, mode, message: outcome.error, issues: outcome.issues, steps, cleanup };
+  if (!outcome.ok) return { ok: false, mode, message: outcome.error, issues: outcome.issues, steps, cleanup, fix: knownFix(outcome.error) };
 
   const ids = outcome.result.ids;
   if (mode === "live") {
@@ -328,7 +360,13 @@ export async function launchDraftAction(raw: LaunchPayload, mode: "validate" | "
   return {
     ok: true,
     mode,
-    message: mode === "validate" ? "Meta accepted the campaign settings." : "Campaign created on Meta — paused, nothing is spending.",
+    message:
+      mode === "validate"
+        ? "Meta accepted the campaign settings."
+        : status === "ACTIVE"
+          ? "Campaign launched. Meta reviews the ad first (usually minutes, up to 24 hours); it starts spending once approved."
+          : "Campaign created on Meta — paused, nothing is spending.",
+    active: mode === "live" && status === "ACTIVE",
     steps,
     campaignId: ids.campaign,
     adsManagerUrl: mode === "live" ? metaLinks.adsManager(client.ad_account_id) : undefined,

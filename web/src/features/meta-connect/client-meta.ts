@@ -1,4 +1,5 @@
 import "server-only";
+import { db } from "@/lib/supabase/server";
 import type { Client } from "@/features/clients/data";
 import { MetaApiError } from "@/lib/meta/graph";
 import {
@@ -62,7 +63,7 @@ export async function loadClientMeta(userId: number, client: Client): Promise<Cl
   if (!token) return empty("We couldn't read the saved Facebook login. Please reconnect.", { ...connection, connection_status: "error" });
 
   try {
-    const [discovery, pixels, healthResult] = await Promise.all([
+    const [discovery, pixels, healthResult, policyAccepted] = await Promise.all([
       discoverAssets(token),
       client.ad_account_id ? listPixels(token, client.ad_account_id) : Promise.resolve([]),
       client.ad_account_id
@@ -71,6 +72,7 @@ export async function loadClientMeta(userId: number, client: Client): Promise<Cl
             (e: unknown) => ({ h: null, err: e instanceof MetaApiError ? `Meta: ${e.message}` : "Could not read the ad account." }),
           )
         : Promise.resolve({ h: null, err: null }),
+      shryxaAdCreated(userId, client.id),
     ]);
     return {
       connection,
@@ -87,6 +89,7 @@ export async function loadClientMeta(userId: number, client: Client): Promise<Cl
         pixelName: client.pixel_name,
         health: healthResult.h,
         healthError: healthResult.err,
+        policyAccepted,
       }),
     };
   } catch (e) {
@@ -116,3 +119,15 @@ export const META_ERRORS: Record<string, string> = {
   unknown_client: "That client wasn't found.",
   agency_only: "Business Manager connect is for agency accounts.",
 };
+
+/** Has Shryxa created an ad for this client? (Meta only allows that after the Non-discrimination Policy.) */
+async function shryxaAdCreated(userId: number, clientId: number): Promise<boolean> {
+  const { count } = await db()
+    .from("campaigns")
+    .select("id", { count: "exact", head: true })
+    .eq("user_id", userId)
+    .eq("client_id", clientId)
+    .eq("state", "launched")
+    .not("meta_ad_id", "is", null);
+  return (count ?? 0) > 0;
+}

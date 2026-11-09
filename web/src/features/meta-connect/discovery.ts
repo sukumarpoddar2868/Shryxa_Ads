@@ -170,8 +170,12 @@ export const metaLinks = {
   adsManager: (adAccountId: string) => `https://adsmanager.facebook.com/adsmanager/manage/campaigns?act=${adAccountId.replace(/^act_/, "")}`,
   createAdAccount: "https://business.facebook.com/settings/ad-accounts",
   linkInstagram: "https://business.facebook.com/settings/instagram-account-v2s",
+  nondiscrimination: "https://www.facebook.com/certification/nondiscrimination",
   eventsManager: "https://business.facebook.com/events_manager2",
 };
+
+/** Below this much left under the account spending limit we warn (about one day of a starter budget). */
+const LOW_LIMIT: Record<string, number> = { INR: 500, USD: 20 };
 
 export function buildReadiness(input: {
   connected: boolean;
@@ -182,6 +186,8 @@ export function buildReadiness(input: {
   pixelName: string | null;
   health: AccountHealth | null;
   healthError: string | null;
+  /** True once Shryxa has created an ad for this client (proves this login accepted the policy). */
+  policyAccepted?: boolean | null;
 }): ReadinessItem[] {
   const items: ReadinessItem[] = [];
   items.push(
@@ -234,6 +240,32 @@ export function buildReadiness(input: {
             state: "todo",
             detail: "Meta only lets you add a card, UPI or funds on its own billing page. Come back here when done.",
             action: { label: "Add payment in Meta", href: metaLinks.billing(input.adAccountId) },
+          },
+    );
+    // Account spending limit nearly used up → ads stop delivering soon after launch.
+    if (h.spendCap !== null) {
+      const left = Math.max(0, h.spendCap - (h.amountSpent ?? 0));
+      const low = LOW_LIMIT[h.currency] ?? 500;
+      if (left < low) {
+        const fmt = (n: number) => `${h.currency} ${n.toLocaleString("en-IN", { maximumFractionDigits: 2 })}`;
+        items.push({
+          key: "spendlimit",
+          label: left === 0 ? "Account spending limit reached" : "Account spending limit almost reached",
+          state: "warn",
+          detail: `Only ${fmt(left)} left of the ${fmt(h.spendCap)} limit — ads stop once it's used, whatever the campaign budget. Raise or remove it in Meta Billing.`,
+          action: { label: "Change limit in Meta", href: metaLinks.billing(input.adAccountId) },
+        });
+      }
+    }
+    items.push(
+      input.policyAccepted
+        ? { key: "policy", label: "Non-discrimination Policy", state: "ok", detail: "Accepted — an ad was created from Shryxa." }
+        : {
+            key: "policy",
+            label: "Accept Meta's Non-discrimination Policy",
+            state: "todo",
+            detail: "One time, by the person connected here. Meta allows this only on Facebook (no API). Ticks itself after your first launch from Shryxa.",
+            action: { label: "Accept on Facebook", href: metaLinks.nondiscrimination },
           },
     );
   }

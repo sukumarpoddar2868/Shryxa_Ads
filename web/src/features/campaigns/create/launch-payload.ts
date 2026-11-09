@@ -18,7 +18,7 @@ export function toLaunchPayload(d: Draft): LaunchPayload | null {
       frequencyCap: d.objective === "OUTCOME_AWARENESS" ? d.campaign.frequencyCap : undefined,
     },
     audience: {
-      pins: d.audience.locations.map((p) => ({ lat: p.lat, lng: p.lng, radiusKm: p.radiusKm })),
+      pins: d.audience.locations.map((p) => ({ lat: p.lat, lng: p.lng, radiusKm: p.radiusKm, geo: p.geo ?? null })),
       ageMin: d.audience.ageMin,
       ageMax: d.audience.ageMax,
       gender: d.audience.gender,

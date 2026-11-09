@@ -17,7 +17,7 @@ function inputFor(d: Draft): EstimateInput | null {
     objective: d.objective,
     destination: d.ad.destination,
     currency: d.campaign.currency,
-    pins: a.locations.map((p) => ({ lat: p.lat, lng: p.lng, radiusKm: p.radiusKm })),
+    pins: a.locations.map((p) => ({ lat: p.lat, lng: p.lng, radiusKm: p.radiusKm, geo: p.geo ?? null })),
     ageMin: a.ageMin,
     ageMax: a.ageMax,
     gender: a.gender,

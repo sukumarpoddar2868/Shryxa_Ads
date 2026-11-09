@@ -75,7 +75,7 @@ export function StartSection({ draft, update, clients, isAgency, goTo }: Section
         campaign: { ...d.campaign, name: c.campaign_name, amount: String(c.daily_budget), budgetType: "daily" },
         audience: {
           ...d.audience,
-          locations: r.pins.map((p) => ({ name: p.name, lat: p.lat, lng: p.lng, radiusKm: p.radius_km, why: p.why })),
+          locations: r.pins.map((p) => ({ name: p.name, lat: p.lat, lng: p.lng, radiusKm: p.radius_km, why: p.why, geo: p.geo })),
           ageMin: c.age_min,
           ageMax: c.age_max,
           gender: c.gender,
@@ -118,7 +118,7 @@ export function StartSection({ draft, update, clients, isAgency, goTo }: Section
       setNotice(
         r.usedFallback
           ? "The AI was busy, so we drafted simple copy from your description. Everything else is filled — review and edit."
-          : `Done — ${r.pins.length} area${r.pins.length === 1 ? "" : "s"}, budget, audience and ad text are filled in. Review each step and edit anything.`,
+          : `Done — ${r.pins.length} area${r.pins.length === 1 ? "" : "s"}, budget, audience and ad text are filled in. Review each step and edit anything.${r.notes.length ? ` Note: ${r.notes.join(" ")}` : ""}`,
       );
     });
   };

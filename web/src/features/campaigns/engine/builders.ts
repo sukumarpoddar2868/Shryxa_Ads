@@ -129,6 +129,9 @@ export function buildAdSet(spec: CampaignSpec): Operation {
     countries: orNull(g.countries),
     cities: orNull(g.cities),
     regions: orNull(g.regions),
+    neighborhoods: orNull(g.neighborhoods),
+    subcities: orNull(g.subcities),
+    zips: orNull(g.zips),
     custom_locations: orNull(g.custom_locations),
     location_types: g.location_types,
   });

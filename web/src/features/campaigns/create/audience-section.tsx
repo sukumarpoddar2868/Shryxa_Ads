@@ -25,6 +25,9 @@ const AreaMap = dynamic(() => import("./area-map"), {
 const SCOPE_RADIUS: Record<ReachScope, number> = { "hyper-local": 1.5, local: 5, "city-wide": 15, metro: 40 };
 
 const RADII = [1, 1.5, 2, 3, 5, 8, 10, 15, 20, 25, 40, 60, 80];
+/** Meta city ids: the city itself, or city + 17–80 km. */
+const CITY_RADII = [0, 17, 25, 40, 60, 80];
+const AREA_KIND: Record<string, string> = { city: "Town / city", neighborhood: "Neighbourhood", subcity: "Area", zip: "PIN code", pin: "Pin" };
 
 export function AudienceSection({ draft, update, goTo, clients }: SectionProps) {
   const a = draft.audience;
@@ -32,6 +35,7 @@ export function AudienceSection({ draft, update, goTo, clients }: SectionProps) 
   const ages = Array.from({ length: 65 - 18 + 1 }, (_, i) => 18 + i);
   const [area, setArea] = useState("");
   const [areaError, setAreaError] = useState<string | null>(null);
+  const [areaNote, setAreaNote] = useState<string | null>(null);
   const [pending, start] = useTransition();
   const [addMode, setAddMode] = useState(false);
 
@@ -41,6 +45,7 @@ export function AudienceSection({ draft, update, goTo, clients }: SectionProps) 
     const city = area.trim();
     if (!city || !draft.clientId) return;
     setAreaError(null);
+    setAreaNote(null);
     start(async () => {
       const r = await resolveAreaAction({
         clientId: draft.clientId!,
@@ -51,8 +56,9 @@ export function AudienceSection({ draft, update, goTo, clients }: SectionProps) 
         currency: draft.campaign.currency,
       });
       if (!r.ok) return setAreaError(r.error);
-      setPins((p) => [...p, ...r.pins.map((x) => ({ name: x.name, lat: x.lat, lng: x.lng, radiusKm: x.radius_km, why: x.why }))]);
+      setPins((p) => [...p, ...r.pins.map((x) => ({ name: x.name, lat: x.lat, lng: x.lng, radiusKm: x.radius_km, why: x.why, geo: x.geo }))]);
       setArea("");
+      setAreaNote(r.notes[0] ?? null);
     });
   };
 
@@ -66,7 +72,7 @@ export function AudienceSection({ draft, update, goTo, clients }: SectionProps) 
           <AudienceTargeting draft={draft} update={update} client={clients.find((c) => c.id === draft.clientId)} />
         </Group>
 
-        <Group title="Locations" hint={`Each area is a circle around a pin. Scope: ${SCOPE_INFO[draft.setup.scope].label}.`}>
+        <Group title="Locations" hint={`Towns, neighbourhoods and PIN codes use Meta’s own areas; pins are circles. Scope: ${SCOPE_INFO[draft.setup.scope].label}.`}>
           {!draft.generated && a.locations.length === 0 && (
             <Callout>
               Areas are picked by AI in{" "}
@@ -80,37 +86,53 @@ export function AudienceSection({ draft, update, goTo, clients }: SectionProps) 
           {a.locations.length > 0 && (
             <ul className="flex flex-col gap-2">
               {a.locations.map((p, i) => (
-                <li key={`${p.name}-${i}`} className="flex flex-wrap items-start gap-3 rounded-card bg-lavender-soft p-3 sm:flex-nowrap">
-                  <MapPin className="mt-1 size-4 shrink-0 text-lavender-deep" aria-hidden />
-                  <div className="min-w-0 flex-1">
-                    <p className="text-[14px] font-bold">{p.name}</p>
-                    {p.why && <p className="text-[13px] text-ink-muted">{p.why}</p>}
-                    <p className="text-[12px] tabular-nums text-ink-muted">
-                      {p.lat.toFixed(4)}, {p.lng.toFixed(4)}
-                    </p>
-                  </div>
-                  <label className="flex items-center gap-2 text-[13px] font-bold">
-                    <span className="sr-only">Radius for {p.name}</span>
-                    <Select
-                      className="h-9 w-28 text-[14px]"
-                      value={p.radiusKm}
-                      onChange={(e) => setPins((all) => all.map((x, j) => (j === i ? { ...x, radiusKm: Number(e.target.value) } : x)))}
+                <li key={`${p.name}-${i}`} className="flex flex-col gap-2 rounded-card bg-lavender-soft p-3">
+                  <div className="flex items-start gap-3">
+                    <MapPin className="mt-1 size-4 shrink-0 text-lavender-deep" aria-hidden />
+                    <div className="min-w-0 flex-1">
+                      <p className="text-[14px] font-bold">{p.name}</p>
+                      {p.why && <p className="text-[13px] text-ink-muted">{p.why}</p>}
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setPins((all) => all.filter((_, j) => j !== i))}
+                      className="grid size-8 shrink-0 place-items-center rounded-full hover:bg-paper"
+                      aria-label={`Remove ${p.name}`}
                     >
-                      {[...new Set([...RADII, p.radiusKm])].sort((x, y) => x - y).map((r) => (
-                        <option key={r} value={r}>
-                          {r} km
-                        </option>
-                      ))}
-                    </Select>
-                  </label>
-                  <button
-                    type="button"
-                    onClick={() => setPins((all) => all.filter((_, j) => j !== i))}
-                    className="grid size-9 shrink-0 place-items-center rounded-full hover:bg-paper"
-                    aria-label={`Remove ${p.name}`}
-                  >
-                    <X className="size-4" aria-hidden />
-                  </button>
+                      <X className="size-4" aria-hidden />
+                    </button>
+                  </div>
+                  <div className="flex flex-wrap items-center justify-between gap-2 pl-7">
+                    <p className="text-[12px] text-ink-muted">
+                      <span className="mr-1.5 rounded-pill bg-paper px-2 py-0.5 font-bold text-lavender-deep">{AREA_KIND[p.geo?.kind ?? "pin"]}</span>
+                      {p.geo ? "Meta's own area" : <span className="tabular-nums">{p.lat.toFixed(4)}, {p.lng.toFixed(4)}</span>}
+                    </p>
+                    {(!p.geo || p.geo.kind === "city") && (
+                      <label className="flex items-center gap-2 text-[13px] font-bold">
+                        <span className="sr-only">Radius for {p.name}</span>
+                        <Select
+                          className="h-9 w-36 bg-paper text-[14px]"
+                          value={p.geo ? (p.radiusKm >= 17 ? p.radiusKm : 0) : p.radiusKm}
+                          onChange={(e) => {
+                            const v = Number(e.target.value);
+                            setPins((all) => all.map((x, j) => (j === i ? { ...x, radiusKm: x.geo && v === 0 ? 5 : v } : x)));
+                          }}
+                        >
+                          {p.geo
+                            ? CITY_RADII.map((r) => (
+                                <option key={r} value={r}>
+                                  {r === 0 ? "Whole town" : `Town + ${r} km`}
+                                </option>
+                              ))
+                            : [...new Set([...RADII, p.radiusKm])].sort((x, y) => x - y).map((r) => (
+                                <option key={r} value={r}>
+                                  {r} km circle
+                                </option>
+                              ))}
+                        </Select>
+                      </label>
+                    )}
+                  </div>
                 </li>
               ))}
             </ul>
@@ -124,7 +146,7 @@ export function AudienceSection({ draft, update, goTo, clients }: SectionProps) 
               <Input
                 id="add-area"
                 value={area}
-                placeholder="e.g. Whitefield, Bangalore"
+                placeholder="e.g. Whitefield, Bangalore · Chaibasa · 833201"
                 onChange={(e) => setArea(e.target.value)}
                 onKeyDown={(e) => {
                   if (e.key === "Enter") {
@@ -139,6 +161,8 @@ export function AudienceSection({ draft, update, goTo, clients }: SectionProps) 
               </Button>
             </div>
             {areaError && <p className="text-[13px] text-tomato-700">{areaError}</p>}
+            {areaNote && <p className="text-[13px] text-ink-muted">{areaNote}</p>}
+            <p className="text-[12px] text-ink-muted">Type a town, &ldquo;Area, City&rdquo; (e.g. HSR Layout, Bangalore) or a 6-digit PIN code.</p>
           </div>
 
           <div className="flex flex-col gap-2">
@@ -151,7 +175,14 @@ export function AudienceSection({ draft, update, goTo, clients }: SectionProps) 
             <AreaMap
               pins={a.locations}
               addMode={addMode}
-              onMove={(i, lat, lng) => setPins((all) => all.map((x, j) => (j === i ? { ...x, lat, lng } : x)))}
+              onMove={(i, lat, lng) =>
+                // A moved Meta area becomes a plain circle where it was dropped.
+                setPins((all) =>
+                  all.map((x, j) =>
+                    j === i ? { ...x, lat, lng, geo: null, name: x.geo ? `${x.name} (moved)` : x.name, radiusKm: x.geo ? (x.geo.kind === "city" ? Math.max(5, Math.min(x.radiusKm, 25)) : 1.5) : x.radiusKm } : x,
+                  ),
+                )
+              }
               onAdd={(lat, lng) => {
                 setPins((all) => [...all, { name: `Dropped pin ${all.length + 1}`, lat, lng, radiusKm: SCOPE_RADIUS[draft.setup.scope], why: "Added on the map" }]);
                 setAddMode(false);

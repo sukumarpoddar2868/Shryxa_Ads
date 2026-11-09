@@ -81,6 +81,9 @@ export const GeoLocations = z.object({
   countries: z.array(z.string()).default(() => []), // ISO 3166-1 alpha-2
   cities: z.array(z.record(z.string(), z.unknown())).default(() => []),
   regions: z.array(z.record(z.string(), z.unknown())).default(() => []),
+  neighborhoods: z.array(z.record(z.string(), z.unknown())).default(() => []),
+  subcities: z.array(z.record(z.string(), z.unknown())).default(() => []),
+  zips: z.array(z.record(z.string(), z.unknown())).default(() => []),
   custom_locations: z.array(CustomLocation).default(() => []),
   location_types: z.array(z.enum(["home", "recent", "travel_in"])).default(() => ["home" as const, "recent" as const]),
 });

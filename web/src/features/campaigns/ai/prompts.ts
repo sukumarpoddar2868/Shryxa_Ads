@@ -13,22 +13,37 @@ export const REACH_SCOPES = ["hyper-local", "local", "city-wide", "metro"] as co
 export type ReachScope = (typeof REACH_SCOPES)[number];
 
 export const SCOPE_INFO: Record<ReachScope, { label: string; blurb: string }> = {
-  "hyper-local": { label: "Hyper-local", blurb: "3 neighbourhoods per city · ~1.5 km each · tightest, least waste" },
-  local: { label: "Local", blurb: "1 circle per city · 3–10 km · single-location service" },
-  "city-wide": { label: "City-wide", blurb: "1 circle per city · 10–25 km · mid-size service or retail" },
-  metro: { label: "Metro", blurb: "1 circle per city · 25–60 km · regional brand" },
+  "hyper-local": { label: "Hyper-local", blurb: "Up to 3 neighbourhoods per city (big cities). Small towns: the whole town" },
+  local: { label: "Local", blurb: "The town or city itself" },
+  "city-wide": { label: "City-wide", blurb: "The city + 17 km around it" },
+  metro: { label: "Metro", blurb: "The city + 40 km around it — regional brands" },
 };
 
+/** One target area after lookup. `geo` = a Meta location id; null = a lat/lng circle. */
 export const Pin = z.object({
   name: z.string().min(1),
   lat: z.number().min(-90).max(90),
   lng: z.number().min(-180).max(180),
-  radius_km: z.number().min(1).max(80),
+  radius_km: z.number().min(0).max(80),
   why: z.string().default(""),
+  geo: z.object({ kind: z.enum(["city", "neighborhood", "subcity", "zip"]), key: z.string().min(1).max(40) }).nullable().default(null),
 });
 export type Pin = z.output<typeof Pin>;
 
-export const LocationGuess = z.object({ cities: z.array(Pin).min(1).max(30) });
+/** What the AI returns: names only. Coordinates come from Meta / OpenStreetMap, never the model. */
+export const LocationGuess = z.object({
+  picks: z
+    .array(
+      z.object({
+        area: z.string().trim().min(1).max(80),
+        city: z.string().trim().min(1).max(80),
+        state: z.string().trim().max(80).default(""),
+        why: z.string().trim().max(300).default(""),
+      }),
+    )
+    .min(1)
+    .max(30),
+});
 
 export function locationPrompt(p: {
   cities: string[];
@@ -37,54 +52,37 @@ export function locationPrompt(p: {
   country: string;
   scope: ReachScope;
 }): string {
-  return `You are resolving target locations for a Meta (Facebook + Instagram) ad campaign.
+  return `You are choosing target areas for a Meta (Facebook + Instagram) ad campaign.
 
-The user has entered these cities to target:
+Cities the user entered:
 ${p.cities.map((c) => `  • ${c}`).join("\n")}
 
-Business context:
-  Business name: ${p.businessName || "(not provided)"}
-  Description:   ${p.about || "(not provided)"}
-  Country:       ${p.country}
-  Reach scope:   ${p.scope}
+Business:
+  Name:        ${p.businessName || "(not provided)"}
+  Description: ${p.about || "(not provided)"}
+  Country:     ${p.country}
+  Reach scope: ${p.scope}
 
-------------------------------------------------------------------
-SCOPE RULES — follow EXACTLY. Wider scopes burn money on irrelevant
-audience; narrower scopes deliver tightly relevant impressions.
-------------------------------------------------------------------
+Return NAMES ONLY — never coordinates. Names are looked up on Meta's location
+list and maps, so use the common, official spelling (e.g. "Koramangala",
+"HSR Layout", "Andheri West", "Salt Lake").
+
+For every entered city, give its official name in "city" and its state/province
+in "state" (e.g. city "Bengaluru" or "Bangalore", state "Karnataka").
 
 If reach scope is "hyper-local":
-  → For EACH input city, return EXACTLY 3 distinct sub-clusters centred on
-    specific neighbourhoods, localities, or business districts most likely
-    to contain this business's customers.
-  → Each cluster: 1.0–2.0 km radius. Default to 1.5 km if unsure.
-  → The \`name\` field MUST be "<Neighbourhood> — <City>" (em dash),
-    e.g. "Indiranagar — Bangalore".
-  → Choose neighbourhoods from the business context, e.g.
-      • CA / tax / legal firm → high-income residential + business districts
-      • Restaurant / cafe     → dense residential + nearby office cluster
-      • Dental / clinic       → affluent residential within driving distance
-      • Coworking / B2B SaaS  → tech hubs, IT parks, business districts
-  → The \`why\` field must NAME the neighbourhood and explain in one sentence
-    why it fits this business.
+  → For each city return up to 3 well-known neighbourhoods / localities most
+    likely to hold this business's customers, one pick each, with "area" = the
+    neighbourhood name only (no city in it).
+  → Only use real, widely known neighbourhood names. For a small town with no
+    well-known neighbourhoods, return ONE pick with "area" = the town name.
+  → "why": one short sentence naming the area and why it fits the business.
 
-If reach scope is "local":     ONE pick per input city. Radius 3–10 km.
-If reach scope is "city-wide": ONE pick per input city. Radius 10–25 km.
-If reach scope is "metro":     ONE pick per input city. Radius 25–60 km.
-For these, \`name\` is "<City>, <State>".
-
-------------------------------------------------------------------
-For every pick return accurate latitude/longitude of the cluster centre
-(for hyper-local use the neighbourhood centroid, NOT the city centre),
-the radius in KILOMETRES, and one short reason in \`why\`.
-Handle ambiguous city names by picking the largest metro and noting it.
+Otherwise ("local", "city-wide", "metro"):
+  → ONE pick per city with "area" = the city name itself; "why" one sentence.
 
 Return one JSON object:
-{
-  "cities": [
-    { "name": "Neighbourhood — City", "lat": 12.9716, "lng": 77.5946, "radius_km": 1.5, "why": "..." }
-  ]
-}`;
+{ "picks": [ { "area": "Koramangala", "city": "Bangalore", "state": "Karnataka", "why": "..." } ] }`;
 }
 
 export function expectedPins(cityCount: number, scope: ReachScope) {
