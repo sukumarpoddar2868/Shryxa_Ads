@@ -79,6 +79,6 @@ Reviewers must see each permission used (ads_management/pages_manage_ads → cre
 - Explain simply; the user prefers short answers and screenshot-driven debugging.
 
 ## Next up
-1. App Review (Advanced Access): reviewer demo Shryxa account, per-permission usage text, reviewer instructions, screencast script. Business verified, icon/category/contact/redirect set.
+1. **App Review submitted-in-progress (2026-11-10):** Advanced Access requested for ads_management, ads_read, business_management, pages_show_list, pages_read_engagement, pages_manage_ads, leads_retrieval, instagram_basic (+ Marketing API Access Tier once its 500-call counter turns green — ~507 read-only calls run 2026-11-10, Meta updates within ~24 h). Reviewer demo Shryxa account: `meta.reviewer@shryxaads.com` (agency_lite, active manual plan to 2027-11; password given to user, not stored here). Screencast: `~/Videos/Screencasts/shryxa-review-captioned.mp4`. Don't request read_insights (unused) — remove it from the Login config.
 2. Razorpay test-mode checkout test; USD plan once international cards approved.
-3. Remaining route tests (Traffic/website, Awareness, Engagement) + Campaigns-tab controls on a real campaign.
+3. Remaining route tests (Traffic/website, Awareness, Engagement).

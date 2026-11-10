@@ -1,6 +1,6 @@
 import "server-only";
 import { pageAccessToken } from "@/features/meta-connect/page-token";
-import { graphDelete, graphPost, MetaApiError } from "@/lib/meta/graph";
+import { graphDelete, graphGet, graphPost, MetaApiError } from "@/lib/meta/graph";
 import { LEAD_FORM_REF, PLACEHOLDERS, substitute, type JsonObject, type Operation } from "./engine/builders.ts";
 import { buildFormPayload } from "./engine/lead-form.ts";
 import type { RunResult, RunStep } from "./engine/run-result.ts";
@@ -104,6 +104,21 @@ export async function runMeta(
             "Meta accepted this step. Later steps need its real id, which validate-only mode doesn't return.";
         }
         break;
+      }
+    }
+
+    // Live: read back each level and make campaign, ad set and ad match the chosen
+    // status, so Ads Manager never shows a "paused" campaign with ad set/ad "On".
+    if (!validateOnly) {
+      const want = spec.campaign.status;
+      for (const id of [result.ids.campaign, result.ids.ad_set, result.ids.ad]) {
+        if (!id) continue;
+        try {
+          const cur = await graphGet<{ status?: string }>(id, token, { fields: "status" });
+          if (cur.status && cur.status !== want) await graphPost(id, token, { status: want });
+        } catch {
+          // Best effort — the campaign switch alone already controls spending.
+        }
       }
     }
   } catch (e) {

@@ -90,7 +90,15 @@ export async function setCampaignStatusAction(clientId: number, campaignId: stri
     }
     if (action === "pause") {
       await graphPost(campaign.id, token, { status: "PAUSED" });
-      return "Campaign paused.";
+      // Also switch the ad sets and ads off, so Ads Manager shows everything Off
+      // (Resume turns them back on).
+      const sets = await liveAdSets(token, campaign.id);
+      const ads = await graphList<{ id: string; status?: string }>(`${campaign.id}/ads`, token, { fields: "id,status" }, 3);
+      await Promise.all([
+        ...sets.filter((s) => s.status === "ACTIVE").map((s) => graphPost(s.id, token, { status: "PAUSED" }).catch(() => undefined)),
+        ...ads.filter((a) => a.status === "ACTIVE").map((a) => graphPost(a.id, token, { status: "PAUSED" }).catch(() => undefined)),
+      ]);
+      return "Campaign paused — ad sets and ads are off too.";
     }
     await graphPost(campaign.id, token, { status: "ARCHIVED" });
     return "Campaign stopped and archived. It can't be turned back on.";
