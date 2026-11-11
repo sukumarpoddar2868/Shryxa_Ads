@@ -65,7 +65,7 @@ Migrations `web/supabase/migrations/` — **0001–0004 applied**. Tables: users
 ## Status
 1. ✅ Foundation · 2. ✅ Clients + Meta connect · 3. ✅ Campaign engine · 4. ✅ Create wizard (feature-complete, untested on real Meta).
 5. ✅ Dashboard + Manage (pause/resume/stop, budget, spend cap) + lead inbox/CSV — built 2026-11-09, untested on real Meta.
-6. ✅ Billing + admin built (Razorpay keys not yet in `web/.env.local`/Vercel → checkout shows "contact us"). Data-deletion page + callbacks built.
+6. ✅ Billing + admin. Razorpay **LIVE on Vercel since 2026-11-11** (test checkout + test webhook verified end to end; live checkout opens, live webhook secret verified). Local `web/.env.local` stays on **test** keys; live pair commented there + in root `.env`. Live plan = `plan_SqLZ…` "Meta Ads Starter — INR" ₹999 (not `plan_To8g…`, that is the shryxa-review app's ₹199 plan; same Razorpay account/keys shared with shryxa-review — never regenerate keys without updating both). Data-deletion page + callbacks built.
 7. ⏳ Cutover (retire Streamlit, tighten DB types).
 Later: ad text in Indian languages, app UI translation, team seats (multi-login per account).
 
@@ -79,6 +79,6 @@ Reviewers must see each permission used (ads_management/pages_manage_ads → cre
 - Explain simply; the user prefers short answers and screenshot-driven debugging.
 
 ## Next up
-1. **App Review submitted-in-progress (2026-11-10):** Advanced Access requested for ads_management, ads_read, business_management, pages_show_list, pages_read_engagement, pages_manage_ads, leads_retrieval, instagram_basic (+ Marketing API Access Tier once its 500-call counter turns green — ~507 read-only calls run 2026-11-10, Meta updates within ~24 h). Reviewer demo Shryxa account: `meta.reviewer@shryxaads.com` (agency_lite, active manual plan to 2027-11; password given to user, not stored here). Screencast: `~/Videos/Screencasts/shryxa-review-captioned.mp4`. Don't request read_insights (unused) — remove it from the Login config.
-2. Razorpay test-mode checkout test; USD plan once international cards approved.
+1. **App Review SUBMITTED 2026-11-11 — "Review in progress" (Meta: up to ~20 days).** Don't change login config, demo account or app URL meanwhile. Requested: Advanced Access requested for ads_management, ads_read, business_management, pages_show_list, pages_read_engagement, pages_manage_ads, leads_retrieval, instagram_basic (+ Marketing API Access Tier once its 500-call counter turns green — ~507 read-only calls run 2026-11-10, Meta updates within ~24 h). Reviewer demo Shryxa account: `meta.reviewer@shryxaads.com` (agency_lite, active manual plan to 2027-11; password given to user, not stored here). Screencast: `~/Videos/Screencasts/shryxa-review-captioned.mp4`. Don't request read_insights (unused) — remove it from the Login config.
+2. USD plan once Razorpay international cards approved.
 3. Remaining route tests (Traffic/website, Awareness, Engagement).
