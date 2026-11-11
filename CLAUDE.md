@@ -4,7 +4,7 @@ Read this first instead of re-scanning the repo. Keep it short and current: upda
 
 ## Product
 SaaS for local businesses and agencies to create, launch and manage **Meta (FB/IG) ad campaigns** without Ads Manager.
-Account types: **business** (one auto client "My business") and **agency** (many clients). Billing via Razorpay (INR/USD, 2-day trial; tiers: starter 1 client, agency_lite 5, agency_standard 10, agency_pro 25 clients/5 seats). Known price: Starter ₹999/mo, $21 intl (agency prices unknown).
+Account types: **business** (one auto client "My business") and **agency** (many clients). Billing via Razorpay (INR/USD, 2-day trial; tiers by client limit only — starter 1, agency_lite 5, agency_standard 10, agency_pro 25; one login per account, no seats). Known price: Starter ₹999/mo, $21 intl (agency prices unknown).
 
 ## Repo
 - `web/` — **the Next.js app (active)**, deployed on Vercel (Root Directory `web`).

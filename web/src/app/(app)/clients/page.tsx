@@ -7,7 +7,7 @@ import { Callout, Card, Chip } from "@/components/ui/surface";
 import { listBusinessConnections } from "@/features/meta-connect/store";
 import { META_ERRORS } from "@/features/meta-connect/client-meta";
 import { requireUser } from "@/features/auth/dal";
-import { BILLING_ARRANGEMENTS, SERVICE_MODELS, ensureSelfClient, listClients, type Client } from "@/features/clients/data";
+import { ensureSelfClient, listClients, type Client } from "@/features/clients/data";
 import { AddClientForm } from "@/features/clients/components/add-client-form";
 
 export const metadata: Metadata = { title: "Clients" };
@@ -109,7 +109,7 @@ export default async function ClientsPage({ searchParams }: PageProps<"/clients"
                 to add more.
               </p>
             ) : (
-              <AddClientForm serviceModels={SERVICE_MODELS} billingArrangements={BILLING_ARRANGEMENTS} />
+              <AddClientForm />
             )}
           </div>
         </Card>

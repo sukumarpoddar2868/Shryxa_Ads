@@ -51,16 +51,12 @@ export default async function AccountPage() {
             <h2 className="text-[19px] font-extrabold">{tierLabel(user.tier)} plan</h2>
             <Chip tone={s.tone}>{user.isAdmin ? "Admin" : s.label}</Chip>
           </div>
-          <dl className="grid gap-4 text-[14px] sm:grid-cols-3">
+          <dl className="grid gap-4 text-[14px] sm:grid-cols-2">
             <div>
               <dt className="text-ink-muted">{user.accountType === "agency" ? "Clients" : "Businesses"}</dt>
               <dd className="mt-1 text-[22px] font-extrabold tabular-nums">
                 {used} <span className="text-[15px] font-bold text-ink-muted">/ {user.clientLimit}</span>
               </dd>
-            </div>
-            <div>
-              <dt className="text-ink-muted">Team seats</dt>
-              <dd className="mt-1 text-[22px] font-extrabold tabular-nums">{user.teamSeats}</dd>
             </div>
             <div>
               <dt className="text-ink-muted">{access.state === "trial" ? "Trial ends" : access.state === "active" ? "Renews" : "Access until"}</dt>
@@ -93,7 +89,7 @@ export default async function AccountPage() {
         <Card className="flex flex-col gap-3">
           <h2 className="text-[19px] font-extrabold">More clients?</h2>
           <p className="text-[15px] text-ink-muted">
-            Agency plans: {Object.values(TIERS).slice(1).map((t) => `${t.label} (${t.clients} clients, ${t.seats} seat${t.seats === 1 ? "" : "s"})`).join(" · ")}. Billed by invoice — message us and we&apos;ll switch your plan within 24 hours.
+            Agency plans: {Object.values(TIERS).slice(1).map((t) => `${t.label} (${t.clients} clients)`).join(" · ")}. Billed by invoice — message us and we&apos;ll switch your plan within 24 hours.
           </p>
           <a href={`mailto:${CONTACT.email}?subject=${encodeURIComponent("Agency plan for " + user.email)}`} className="flex items-center gap-2 text-[14px] font-bold hover:text-tomato-700">
             <Mail className="size-4" aria-hidden /> {CONTACT.email}

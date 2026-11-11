@@ -472,7 +472,7 @@ export function Audiences() {
       icon: Briefcase,
       who: "Agencies",
       line: "Run campaigns for many clients without juggling logins.",
-      points: ["Up to 25 clients", "Team seats", "Per-client Meta connection"],
+      points: ["Up to 25 clients", "One login for every client", "Per-client Meta connection"],
       bg: "bg-lavender",
       pat: "pattern-grid text-ink/[0.07]",
     },
@@ -528,10 +528,10 @@ export function Audiences() {
 /* ---------------------------------------------------------- Plans */
 export function Plans() {
   const plans = [
-    { name: "Starter", clients: 1, seats: 1, for: "One business, its own ads.", tone: "bg-paper", price: "₹999 / month · $21 outside India" },
-    { price: "Priced on request · invoiced", name: "Agency Lite", clients: 5, seats: 1, for: "A solo marketer with a few clients.", tone: "bg-lavender" },
-    { price: "Priced on request · invoiced", name: "Agency Standard", clients: 10, seats: 2, for: "A small team growing its book.", tone: "bg-chartreuse" },
-    { price: "Priced on request · invoiced", name: "Agency Pro", clients: 25, seats: 5, for: "Agencies running many accounts.", tone: "bg-ink text-paper" },
+    { name: "Starter", clients: 1, for: "One business, its own ads.", tone: "bg-paper", price: "₹999 / month · $21 outside India" },
+    { price: "Priced on request · invoiced", name: "Agency Lite", clients: 5, for: "A solo marketer with a few clients.", tone: "bg-lavender" },
+    { price: "Priced on request · invoiced", name: "Agency Standard", clients: 10, for: "A growing agency.", tone: "bg-chartreuse" },
+    { price: "Priced on request · invoiced", name: "Agency Pro", clients: 25, for: "Agencies running many accounts.", tone: "bg-ink text-paper" },
   ];
   return (
     <section id="plans" className="relative scroll-mt-16 overflow-hidden bg-lavender-soft py-24 md:py-32">
@@ -551,7 +551,7 @@ export function Plans() {
               <p className="mt-1 text-[15px] font-bold">{p.clients === 1 ? "client" : "clients"}</p>
               <p className="mt-4 text-[15px] font-extrabold">{p.price}</p>
               <ul className="mt-6 space-y-2 text-[15px]">
-                {[`${p.seats} team ${p.seats === 1 ? "seat" : "seats"}`, "AI copy + previews", "Auto-pause protection"].map((f) => (
+                {["AI copy + previews", "Lead inbox + CSV", "Auto-pause protection"].map((f) => (
                   <li key={f} className="flex items-center gap-2">
                     <Check className="size-4 shrink-0" strokeWidth={3} aria-hidden /> {f}
                   </li>

@@ -14,7 +14,7 @@ export async function setTierAction(form: FormData): Promise<void> {
   const id = UserId.parse(form.get("userId"));
   const tier = z.enum(TIER_KEYS as [string, ...string[]]).parse(form.get("tier")) as keyof typeof TIERS;
   const t = TIERS[tier];
-  await db().from("users").update({ tier, client_limit: t.clients, team_seats: t.seats }).eq("id", id);
+  await db().from("users").update({ tier, client_limit: t.clients }).eq("id", id);
   revalidatePath("/admin");
 }
 

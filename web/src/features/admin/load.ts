@@ -7,7 +7,6 @@ export type AdminUser = {
   email: string;
   tier: string;
   clientLimit: number;
-  seats: number;
   isAdmin: boolean;
   accountType: string;
   currency: string;
@@ -23,7 +22,7 @@ export type AdminUser = {
 
 export async function loadAdminUsers(q: string): Promise<AdminUser[]> {
   const [{ data: users }, { data: subs }, { data: clients }, { data: campaigns }] = await Promise.all([
-    db().from("users").select("id, email, tier, client_limit, team_seats, is_admin, account_type, currency, created_at, trial_ends_at").order("id", { ascending: false }).limit(500),
+    db().from("users").select("id, email, tier, client_limit, is_admin, account_type, currency, created_at, trial_ends_at").order("id", { ascending: false }).limit(500),
     db().from("subscriptions").select("user_id, status, provider, current_period_end"),
     db().from("clients").select("user_id, meta_connection_id"),
     db().from("campaigns").select("user_id, state"),
@@ -47,7 +46,6 @@ export async function loadAdminUsers(q: string): Promise<AdminUser[]> {
         email: u.email,
         tier: u.tier,
         clientLimit: u.client_limit,
-        seats: u.team_seats,
         isAdmin: Boolean(u.is_admin),
         accountType: u.account_type,
         currency: u.currency,

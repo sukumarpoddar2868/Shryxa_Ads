@@ -11,11 +11,11 @@ export const CONTACT = {
   name: "Sukumar Poddar",
   city: "Bangalore, Karnataka, India",
   email: "sukumarpoddar90@gmail.com",
-  whatsapp: "+91 9102916841",
+  whatsapp: "+91 6206297928", // phone + WhatsApp
 };
 
 // Markdown hard line breaks (two trailing spaces) keep the address on separate lines.
-const contactBlock = [CONTACT.name, CONTACT.city, `**${CONTACT.email}**`, `WhatsApp **${CONTACT.whatsapp}**`].join("  \n");
+const contactBlock = [CONTACT.name, CONTACT.city, `**${CONTACT.email}**`, `Phone / WhatsApp **${CONTACT.whatsapp}**`].join("  \n");
 
 export type LegalDoc = { slug: "privacy" | "terms" | "refund" | "service" | "data-deletion"; title: string; short: string; body: string };
 
@@ -254,7 +254,7 @@ Karnataka, India**.
 ## 11. Contact
 
 For questions about these Terms, contact us at **${CONTACT.email}** or
-WhatsApp **${CONTACT.whatsapp}**.
+phone / WhatsApp **${CONTACT.whatsapp}**.
 `,
 };
 
@@ -308,7 +308,7 @@ You can cancel your subscription at any time. Two ways:
 1. **Via Razorpay**: open your most recent Razorpay billing email and
    click *Manage subscription* → *Cancel*. The cancellation is
    immediate; no further charges will be made.
-2. **Email or WhatsApp**: message us on **${CONTACT.whatsapp}** or email
+2. **Email, phone or WhatsApp**: call or message us on **${CONTACT.whatsapp}** or email
    **${CONTACT.email}** with the subject line *"Cancel subscription"* and
    your registered email — we'll cancel it for you within one business
    day.
@@ -423,7 +423,7 @@ payment confirmed but subscription not active, ads not launching,
 dashboard not loading — contact us:
 
 - **Email**: ${CONTACT.email}
-- **WhatsApp**: ${CONTACT.whatsapp}
+- **Phone / WhatsApp**: ${CONTACT.whatsapp}
 
 **Response time**: within 24 hours, Monday–Friday, 10:00–18:00 IST. For
 urgent issues during business hours, WhatsApp is faster.

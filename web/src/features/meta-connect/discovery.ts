@@ -261,11 +261,12 @@ export function buildReadiness(input: {
       input.policyAccepted
         ? { key: "policy", label: "Non-discrimination Policy", state: "ok", detail: "Accepted — an ad was created from Shryxa." }
         : {
+            // Meta doesn't tell apps whether it was accepted, so this is a reminder, not a to-do.
             key: "policy",
-            label: "Accept Meta's Non-discrimination Policy",
-            state: "todo",
-            detail: "One time, by the person connected here. Meta allows this only on Facebook (no API). Ticks itself after your first launch from Shryxa.",
-            action: { label: "Accept on Facebook", href: metaLinks.nondiscrimination },
+            label: "Non-discrimination Policy (one time)",
+            state: "optional",
+            detail: "Already accepted on Facebook? Nothing to do. If not, accept it once — Meta blocks the first ad otherwise. Meta doesn't share this with apps, so it's ticked after your first launch from Shryxa.",
+            action: { label: "Open on Facebook", href: metaLinks.nondiscrimination },
           },
     );
   }

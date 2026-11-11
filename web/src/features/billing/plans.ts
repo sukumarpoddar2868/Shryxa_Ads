@@ -1,9 +1,9 @@
-/** Plan tiers. Starter is self-serve (Razorpay); agency tiers are invoiced and applied by an admin. */
+/** Plan tiers (one login per account; tiers differ only by client limit). */
 export const TIERS = {
-  starter: { label: "Starter", clients: 1, seats: 1 },
-  agency_lite: { label: "Agency Lite", clients: 5, seats: 1 },
-  agency_standard: { label: "Agency Standard", clients: 10, seats: 2 },
-  agency_pro: { label: "Agency Pro", clients: 25, seats: 5 },
+  starter: { label: "Starter", clients: 1 },
+  agency_lite: { label: "Agency Lite", clients: 5 },
+  agency_standard: { label: "Agency Standard", clients: 10 },
+  agency_pro: { label: "Agency Pro", clients: 25 },
 } as const;
 export type Tier = keyof typeof TIERS;
 export const TIER_KEYS = Object.keys(TIERS) as Tier[];

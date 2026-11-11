@@ -16,9 +16,7 @@ import {
 } from "@/features/meta-connect/store";
 import { importClients, type ImportState } from "./import";
 import {
-  BILLING_ARRANGEMENTS,
   ClientLimitError,
-  SERVICE_MODELS,
   createClientRecord,
   deleteClientRecord,
   getClient,
@@ -29,11 +27,6 @@ import {
 
 const AddClientSchema = z.object({
   businessName: z.string().trim().min(2, "Enter the business name.").max(120),
-  serviceModel: z.enum(Object.keys(SERVICE_MODELS) as [keyof typeof SERVICE_MODELS]),
-  billingArrangement: z
-    .enum(Object.keys(BILLING_ARRANGEMENTS) as [keyof typeof BILLING_ARRANGEMENTS])
-    .optional()
-    .or(z.literal("").transform(() => undefined)),
 });
 
 export type AddClientState = { error?: string; fieldErrors?: { businessName?: string }; values?: { businessName?: string } };
@@ -50,8 +43,9 @@ export async function addClientAction(_prev: AddClientState, form: FormData): Pr
   try {
     id = await createClientRecord(user, {
       businessName: parsed.data.businessName,
-      serviceModel: parsed.data.serviceModel,
-      billingArrangement: parsed.data.billingArrangement ?? null,
+      // Not asked any more (nothing used it); stored with a neutral default.
+      serviceModel: "agency_managed",
+      billingArrangement: null,
     });
   } catch (e) {
     if (e instanceof ClientLimitError) return { error: `${e.message} Upgrade on the Account page to add more.`, values };

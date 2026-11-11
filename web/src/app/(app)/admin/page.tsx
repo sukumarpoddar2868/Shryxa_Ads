@@ -59,7 +59,7 @@ export default async function AdminPage({ searchParams }: PageProps<"/admin">) {
                     {u.provider ? ` (${u.provider})` : ""}
                   </p>
                   <p className="mt-1 text-[13px] text-ink-muted tabular-nums">
-                    {u.clients}/{u.clientLimit} clients · {u.connected} connected · {u.launched} launched · {u.seats} seat(s)
+                    {u.clients}/{u.clientLimit} clients · {u.connected} connected · {u.launched} launched
                   </p>
                 </div>
                 {!u.isAdmin && (
