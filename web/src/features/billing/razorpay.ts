@@ -1,6 +1,7 @@
 import "server-only";
 import { createHmac, timingSafeEqual } from "node:crypto";
 import { billingEnv } from "@/lib/env";
+import { isOwnPlan } from "./plans";
 
 /** Minimal Razorpay REST client (Basic auth). Docs: razorpay.com/docs/api/payments/subscriptions */
 
@@ -42,6 +43,12 @@ export function createSubscription(planId: string, notes: Record<string, string>
     method: "POST",
     body: { plan_id: planId, total_count: 120, customer_notify: 1, notes },
   });
+}
+
+/** False for another Shryxa app's subscription (same Razorpay account, different plan). */
+export function isOurSubscription(sub: Pick<RzpSubscription, "plan_id">): boolean {
+  const e = billingEnv();
+  return isOwnPlan(sub.plan_id, [e.RAZORPAY_PLAN_ID_INR, e.RAZORPAY_PLAN_ID_USD]);
 }
 
 function safeEqualHex(a: string, b: string): boolean {

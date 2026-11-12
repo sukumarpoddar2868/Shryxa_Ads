@@ -1,6 +1,6 @@
 import { applyRemoteSubscription, enforceBilling } from "@/features/billing/access";
 import type { RzpSubscription } from "@/features/billing/razorpay";
-import { verifyWebhookSignature } from "@/features/billing/razorpay";
+import { isOurSubscription, verifyWebhookSignature } from "@/features/billing/razorpay";
 import { billingConfigured } from "@/lib/env";
 import { db } from "@/lib/supabase/server";
 
@@ -20,9 +20,11 @@ export async function POST(req: Request) {
   const sub = event.payload?.subscription?.entity;
   if (!event.event?.startsWith("subscription.") || !sub?.id) return Response.json({ ignored: true });
 
-  // Match by our stored id first; fall back to the user id we put in notes.
+  // Match by our stored id first; fall back to the user id we put in notes, but only for a
+  // subscription on our own plan. Other Shryxa apps share this Razorpay account, so their events
+  // arrive here too, and their notes.user_id is a different person in this app.
   const { data: row } = await db().from("subscriptions").select("user_id").eq("razorpay_subscription_id", sub.id).maybeSingle();
-  const userId = row?.user_id ?? (Number(sub.notes?.user_id) || null);
+  const userId = row?.user_id ?? (isOurSubscription(sub) ? Number(sub.notes?.user_id) || null : null);
   if (!userId) return Response.json({ ignored: true });
   const { data: user } = await db().from("users").select("id").eq("id", userId).maybeSingle();
   if (!user) return Response.json({ ignored: true });

@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { computeAccess, fromRazorpay } from "./plans.ts";
+import { computeAccess, fromRazorpay, isOwnPlan } from "./plans.ts";
 
 const NOW = Date.parse("2026-11-09T12:00:00Z");
 const iso = (days: number) => new Date(NOW + days * 86_400_000).toISOString();
@@ -32,4 +32,12 @@ test("razorpay status mapping", () => {
   assert.equal(fromRazorpay("halted"), "past_due");
   assert.equal(fromRazorpay("cancelled"), "canceled");
   assert.equal(fromRazorpay("created"), null);
+});
+
+test("only a subscription on our own plan is ours (shared Razorpay account)", () => {
+  const own = ["plan_ads_inr", undefined];
+  assert.equal(isOwnPlan("plan_ads_inr", own), true);
+  assert.equal(isOwnPlan("plan_other_app", own), false);
+  assert.equal(isOwnPlan(undefined, own), false);
+  assert.equal(isOwnPlan("", [undefined, undefined]), false);
 });

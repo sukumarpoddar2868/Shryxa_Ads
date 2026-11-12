@@ -33,6 +33,13 @@ const MAP: Record<string, AccessState> = {
 export const fromRazorpay = (s: string): "active" | "past_due" | "canceled" | "expired" | null =>
   (MAP[s] as "active" | "past_due" | "canceled" | "expired" | undefined) ?? null;
 
+/**
+ * The Razorpay account is shared with other Shryxa apps, so their subscription events and
+ * payments reach this app too. Only a subscription on one of our own plans is ours.
+ */
+export const isOwnPlan = (planId: string | null | undefined, ownPlanIds: (string | undefined)[]): boolean =>
+  !!planId && ownPlanIds.includes(planId);
+
 /** Pure: who may spend right now. `now` passed in for testability. */
 export function computeAccess(input: { status: string | null; trialEndsAt: string | null; periodEnd: string | null; isAdmin: boolean }, now: number): Access {
   const t = input.trialEndsAt ? Date.parse(input.trialEndsAt) : NaN;

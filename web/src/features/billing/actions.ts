@@ -5,7 +5,7 @@ import { z } from "zod";
 import { requireUser } from "@/features/auth/dal";
 import { billingConfigured, billingEnv } from "@/lib/env";
 import { applyRemoteSubscription, enforceBilling, getAccess } from "./access";
-import { cancelSubscription, createSubscription, fetchSubscription, verifyCheckoutSignature } from "./razorpay";
+import { cancelSubscription, createSubscription, fetchSubscription, isOurSubscription, verifyCheckoutSignature } from "./razorpay";
 
 export type CheckoutStart =
   | { ok: true; keyId: string; subscriptionId: string; email: string }
@@ -43,6 +43,8 @@ export async function confirmCheckoutAction(raw: unknown): Promise<{ ok: boolean
   const { razorpay_payment_id: pay, razorpay_subscription_id: sid, razorpay_signature: sig } = p.data;
   if (!verifyCheckoutSignature(pay, sid, sig)) return { ok: false, message: "Payment signature didn't match. If you were charged, contact support." };
   const remote = await fetchSubscription(sid);
+  // Same Razorpay keys sign other Shryxa apps' payments: a valid signature alone doesn't make it ours.
+  if (!isOurSubscription(remote)) return { ok: false, message: "That payment is for a different Shryxa product." };
   if (remote.notes?.user_id !== String(user.id)) return { ok: false, message: "That subscription belongs to another account." };
   await applyRemoteSubscription(user.id, remote);
   const r = await enforceBilling(user.id);
