@@ -50,14 +50,23 @@ export function Segmented<T extends string>({
   value,
   options,
   onChange,
+  variant = "inline",
 }: {
   label: string;
   value: T;
   options: { value: T; label: string }[];
   onChange: (v: T) => void;
+  /** "bar": full-width, equal segments on white. For narrow lavender cards, where the inline one would wrap. */
+  variant?: "inline" | "bar";
 }) {
+  const bar = variant === "bar";
   return (
-    <div role="radiogroup" aria-label={label} className="inline-flex flex-wrap gap-1 rounded-pill bg-lavender-soft p-1">
+    <div
+      role="radiogroup"
+      aria-label={label}
+      className={cn("gap-1 rounded-pill p-1", bar ? "grid w-full bg-paper" : "inline-flex flex-wrap bg-lavender-soft")}
+      style={bar ? { gridTemplateColumns: `repeat(${options.length}, minmax(0, 1fr))` } : undefined}
+    >
       {options.map((o) => (
         <button
           key={o.value}
@@ -66,7 +75,8 @@ export function Segmented<T extends string>({
           aria-checked={value === o.value}
           onClick={() => onChange(o.value)}
           className={cn(
-            "rounded-pill px-4 py-1.5 text-[14px] font-bold transition-colors",
+            "rounded-pill py-1.5 font-bold transition-colors",
+            bar ? "px-1 text-[13px] whitespace-nowrap" : "px-4 text-[14px]",
             value === o.value ? "bg-chartreuse text-ink" : "text-ink-muted hover:text-ink",
           )}
         >

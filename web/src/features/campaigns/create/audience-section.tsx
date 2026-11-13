@@ -24,20 +24,49 @@ const AreaMap = dynamic(() => import("./area-map"), {
 /** Radius for a pin dropped on the map, by reach scope. */
 const SCOPE_RADIUS: Record<ReachScope, number> = { "hyper-local": 1.5, local: 5, "city-wide": 15, metro: 40 };
 
-const RADII = [1, 1.5, 2, 3, 5, 8, 10, 15, 20, 25, 40, 60, 80];
-/** Meta city ids: the city itself, or city + 17–80 km. */
-const CITY_RADII = [17, 25, 40, 60, 80];
+/** Slider stops in km: finer steps at the small end, where a local business cares most. Meta's smallest circle is 1 km. */
+const PIN_KM = [1, 1.5, 2, 2.5, 3, 4, 5, 6, 8, 10, 12, 15, 20, 25, 30, 40, 50, 60, 80];
+/** Meta city ids: the city itself, or the city + 17–80 km around it. */
+const CITY_PLUS_KM = [17, 20, 25, 30, 40, 50, 60, 70, 80];
 /**
- * A circle around a Meta area's centre instead of the area itself (smallest circle: 1 km).
+ * A circle around a Meta area's centre instead of the area itself.
  * Measured on Meta's audience estimate, Nov 2026: for a town a circle reaches fewer people than
  * the whole town; for a neighbourhood it reaches far more, because Meta's neighbourhood ids are
- * its tightest areas. So the two are labelled "Smaller" and "Wider".
+ * its tightest areas. So the toggle says "Smaller" for a town and "Wider circle" for a neighbourhood.
  */
-const CIRCLE_RADII = { city: [1, 2, 3, 5, 8, 10, 15], area: [1, 1.5, 2, 3, 5] };
+const CIRCLE_KM = { city: [1, 2, 3, 4, 5, 6, 8, 10, 12, 15], area: [1, 1.5, 2, 2.5, 3, 4, 5] };
+/** How a Meta area is targeted: the area itself, a circle round its centre, or (towns) the town plus a ring. */
+type SizeMode = "whole" | "circle" | "plus";
 const AREA_KIND: Record<string, string> = { city: "Town / city", neighborhood: "Neighbourhood", subcity: "Area", zip: "PIN code", pin: "Pin", circle: "Circle" };
-const WHOLE: Record<GeoRef["kind"], string> = { city: "Whole town", neighborhood: "Whole neighbourhood", subcity: "Whole area", zip: "Whole PIN code area" };
+/** Toggle label for "Meta's own area". Short, because the toggle sits in a narrow card. */
+const WHOLE: Record<GeoRef["kind"], string> = { city: "Whole town", neighborhood: "Neighbourhood", subcity: "Whole area", zip: "PIN area" };
 /** Circle drawn on the map for a Meta area (Meta targets its own shape, not this circle). */
 const DISPLAY_KM: Record<GeoRef["kind"], number> = { city: 5, neighborhood: 1.5, subcity: 1.5, zip: 3 };
+
+const nearest = (stops: number[], km: number) => stops.reduce((best, s, i) => (Math.abs(s - km) < Math.abs(stops[best] - km) ? i : best), 0);
+
+/** A bar with a handle: slide to make the radius bigger or smaller. Moves along `stops`. */
+function RadiusSlider({ name, stops, km, onChange, text = (v) => `${v} km` }: { name: string; stops: number[]; km: number; onChange: (km: number) => void; text?: (km: number) => string }) {
+  const at = nearest(stops, km);
+  return (
+    <div className="flex w-full items-center gap-3">
+      <span className="shrink-0 text-[12px] text-ink-muted tabular-nums">{stops[0]} km</span>
+      <input
+        type="range"
+        min={0}
+        max={stops.length - 1}
+        step={1}
+        value={at}
+        onChange={(e) => onChange(stops[Number(e.target.value)])}
+        aria-label={`Radius for ${name}`}
+        aria-valuetext={text(stops[at])}
+        className="h-6 min-w-0 flex-1 cursor-pointer accent-lavender-deep"
+      />
+      <span className="shrink-0 text-[12px] text-ink-muted tabular-nums">{stops[stops.length - 1]} km</span>
+      <output className="w-20 shrink-0 rounded-pill bg-paper px-2 py-1 text-center text-[14px] font-bold tabular-nums">{text(km)}</output>
+    </div>
+  );
+}
 
 export function AudienceSection({ draft, update, goTo, clients }: SectionProps) {
   const a = draft.audience;
@@ -84,7 +113,7 @@ export function AudienceSection({ draft, update, goTo, clients }: SectionProps) 
 
         <Group
           title="Locations"
-          hint={`Towns, neighbourhoods and PIN codes use Meta’s own areas; pins are circles. A neighbourhood is the tightest area Meta offers. For a town you can pick a smaller circle around its centre; the audience size above shows the effect. Scope: ${SCOPE_INFO[draft.setup.scope].label}.`}
+          hint={`Towns, neighbourhoods and PIN codes use Meta’s own areas; pins are circles. A neighbourhood is the tightest area Meta offers. For a town you can switch to a smaller circle. Slide the bar to change a radius; the audience size above shows the effect. Scope: ${SCOPE_INFO[draft.setup.scope].label}.`}
         >
           {!draft.generated && a.locations.length === 0 && (
             <Callout>
@@ -104,7 +133,21 @@ export function AudienceSection({ draft, update, goTo, clients }: SectionProps) 
                 const isCity = ref?.kind === "city";
                 // A circle needs the area's own centre. A PIN is only shown at its town's centre, so no circle for it.
                 const canCircle = ref !== null && ref.kind !== "zip" && isPlaced(p);
-                const circles = isCity ? CIRCLE_RADII.city : CIRCLE_RADII.area;
+                const mode: SizeMode = !p.geo ? "circle" : isCity && p.radiusKm >= 17 ? "plus" : "whole";
+                const modes: { value: SizeMode; label: string }[] = ref
+                  ? [
+                      { value: "whole" as const, label: WHOLE[ref.kind] },
+                      ...(canCircle ? [{ value: "circle" as const, label: isCity ? "Smaller" : "Wider circle" }] : []),
+                      ...(isCity ? [{ value: "plus" as const, label: "Bigger" }] : []),
+                    ]
+                  : [];
+                const patch = (next: Partial<DraftPin>) => setPins((all) => all.map((x, j) => (j === i ? { ...x, ...next } : x)));
+                const setMode = (m: SizeMode) => {
+                  if (!ref || m === mode) return;
+                  if (m === "whole") patch({ geo: ref, origin: null, radiusKm: DISPLAY_KM[ref.kind] });
+                  else if (m === "plus") patch({ geo: ref, origin: null, radiusKm: CITY_PLUS_KM[0] });
+                  else patch({ geo: null, origin: ref, radiusKm: isCity ? 3 : 1 });
+                };
                 return (
                   <li key={`${p.name}-${i}`} className="flex flex-col gap-2 rounded-card bg-lavender-soft p-3">
                     <div className="flex items-start gap-3">
@@ -122,76 +165,22 @@ export function AudienceSection({ draft, update, goTo, clients }: SectionProps) 
                         <X className="size-4" aria-hidden />
                       </button>
                     </div>
-                    <div className="flex flex-wrap items-center justify-between gap-2 pl-7">
+                    <div className="flex flex-col gap-2.5 pl-7">
                       <p className="text-[12px] text-ink-muted">
                         <span className="mr-1.5 rounded-pill bg-paper px-2 py-0.5 font-bold text-lavender-deep">{AREA_KIND[p.geo?.kind ?? (p.origin ? "circle" : "pin")]}</span>
                         {p.geo ? (
-                          isPlaced(p) ? "Meta's own area" : "Meta's own area · not on the map right now"
+                          `Meta's own area${mode === "plus" ? ` + ${p.radiusKm} km around it` : ""}${isPlaced(p) ? "" : " · not on the map right now"}`
                         ) : p.origin ? (
                           isCity ? `Only within ${p.radiusKm} km of the centre` : `Within ${p.radiusKm} km of its centre`
                         ) : (
                           <span className="tabular-nums">{p.lat?.toFixed(4)}, {p.lng?.toFixed(4)}</span>
                         )}
                       </p>
-                      {(!ref || isCity || canCircle) && (
-                        <label className="flex items-center gap-2 text-[13px] font-bold">
-                          <span className="sr-only">Size of {p.name}</span>
-                          {ref ? (
-                            <Select
-                              className="h-9 w-52 bg-paper text-[14px]"
-                              // "m:" = Meta's own area (city: 0 = the town, 17–80 = town + km); "c:" = a circle around its centre.
-                              value={p.geo ? `m:${ref.kind === "city" && p.radiusKm >= 17 ? p.radiusKm : 0}` : `c:${p.radiusKm}`}
-                              onChange={(e) => {
-                                const [mode, n] = e.target.value.split(":");
-                                const v = Number(n);
-                                setPins((all) =>
-                                  all.map((x, j) =>
-                                    j !== i
-                                      ? x
-                                      : mode === "m"
-                                        ? { ...x, geo: ref, origin: null, radiusKm: ref.kind === "city" && v >= 17 ? v : DISPLAY_KM[ref.kind] }
-                                        : { ...x, geo: null, origin: ref, radiusKm: v },
-                                  ),
-                                );
-                              }}
-                            >
-                              <optgroup label="Meta's own area">
-                                <option value="m:0">{WHOLE[ref.kind]}</option>
-                                {ref.kind === "city" &&
-                                  CITY_RADII.map((r) => (
-                                    <option key={r} value={`m:${r}`}>
-                                      Town + {r} km
-                                    </option>
-                                  ))}
-                              </optgroup>
-                              {canCircle && (
-                                <optgroup label={isCity ? "Smaller: circle around the centre" : "Wider: circle around its centre"}>
-                                  {[...new Set([...circles, ...(p.geo ? [] : [p.radiusKm])])].sort((x, y) => x - y).map((r) => (
-                                    <option key={r} value={`c:${r}`}>
-                                      {isCity ? `Only within ${r} km` : `Within ${r} km`}
-                                    </option>
-                                  ))}
-                                </optgroup>
-                              )}
-                            </Select>
-                          ) : (
-                            <Select
-                              className="h-9 w-36 bg-paper text-[14px]"
-                              value={p.radiusKm}
-                              onChange={(e) => {
-                                const v = Number(e.target.value);
-                                setPins((all) => all.map((x, j) => (j === i ? { ...x, radiusKm: v } : x)));
-                              }}
-                            >
-                              {[...new Set([...RADII, p.radiusKm])].sort((x, y) => x - y).map((r) => (
-                                <option key={r} value={r}>
-                                  {r} km circle
-                                </option>
-                              ))}
-                            </Select>
-                          )}
-                        </label>
-                      )}
+                      {modes.length > 1 && <Segmented label={`Size of ${p.name}`} value={mode} onChange={setMode} options={modes} variant="bar" />}
+                      {/* The bar: a plain pin, a circle made from a Meta area, or a town plus a ring. */}
+                      {!ref && <RadiusSlider name={p.name} stops={PIN_KM} km={p.radiusKm} onChange={(km) => patch({ radiusKm: km })} />}
+                      {ref && mode === "circle" && <RadiusSlider name={p.name} stops={isCity ? CIRCLE_KM.city : CIRCLE_KM.area} km={p.radiusKm} onChange={(km) => patch({ radiusKm: km })} />}
+                      {ref && mode === "plus" && <RadiusSlider name={p.name} stops={CITY_PLUS_KM} km={p.radiusKm} onChange={(km) => patch({ radiusKm: km })} text={(v) => `+ ${v} km`} />}
                     </div>
                   </li>
                 );
