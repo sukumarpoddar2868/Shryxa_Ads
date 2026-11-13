@@ -1,5 +1,5 @@
 import type { LaunchPayload } from "../launch-actions";
-import type { Draft } from "./blueprint";
+import { payloadPins, type Draft } from "./blueprint";
 
 /** Draft (with local blob previews) → the compact payload the server validates. */
 export function toLaunchPayload(d: Draft): LaunchPayload | null {
@@ -18,7 +18,7 @@ export function toLaunchPayload(d: Draft): LaunchPayload | null {
       frequencyCap: d.objective === "OUTCOME_AWARENESS" ? d.campaign.frequencyCap : undefined,
     },
     audience: {
-      pins: d.audience.locations.map((p) => ({ lat: p.lat, lng: p.lng, radiusKm: p.radiusKm, geo: p.geo ?? null })),
+      pins: payloadPins(d.audience.locations),
       ageMin: d.audience.ageMin,
       ageMax: d.audience.ageMax,
       gender: d.audience.gender,

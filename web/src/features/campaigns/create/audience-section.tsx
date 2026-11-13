@@ -9,7 +9,7 @@ import { LANGUAGE_TO_LOCALES } from "../engine/presets.ts";
 import { resolveAreaAction } from "../ai/actions";
 import dynamic from "next/dynamic";
 import { SCOPE_INFO, type ReachScope } from "../ai/prompts.ts";
-import { DEVICE_LABELS, type DeviceOs, type DraftPin } from "./blueprint";
+import { DEVICE_LABELS, isPlaced, type DeviceOs, type DraftPin, type GeoRef } from "./blueprint";
 import type { SectionProps } from "./create-campaign";
 import { AudienceEstimate } from "./audience-estimate";
 import { AudienceTargeting } from "./audience-targeting";
@@ -26,8 +26,18 @@ const SCOPE_RADIUS: Record<ReachScope, number> = { "hyper-local": 1.5, local: 5,
 
 const RADII = [1, 1.5, 2, 3, 5, 8, 10, 15, 20, 25, 40, 60, 80];
 /** Meta city ids: the city itself, or city + 17–80 km. */
-const CITY_RADII = [0, 17, 25, 40, 60, 80];
-const AREA_KIND: Record<string, string> = { city: "Town / city", neighborhood: "Neighbourhood", subcity: "Area", zip: "PIN code", pin: "Pin" };
+const CITY_RADII = [17, 25, 40, 60, 80];
+/**
+ * A circle around a Meta area's centre instead of the area itself (smallest circle: 1 km).
+ * Measured on Meta's audience estimate, Nov 2026: for a town a circle reaches fewer people than
+ * the whole town; for a neighbourhood it reaches far more, because Meta's neighbourhood ids are
+ * its tightest areas. So the two are labelled "Smaller" and "Wider".
+ */
+const CIRCLE_RADII = { city: [1, 2, 3, 5, 8, 10, 15], area: [1, 1.5, 2, 3, 5] };
+const AREA_KIND: Record<string, string> = { city: "Town / city", neighborhood: "Neighbourhood", subcity: "Area", zip: "PIN code", pin: "Pin", circle: "Circle" };
+const WHOLE: Record<GeoRef["kind"], string> = { city: "Whole town", neighborhood: "Whole neighbourhood", subcity: "Whole area", zip: "Whole PIN code area" };
+/** Circle drawn on the map for a Meta area (Meta targets its own shape, not this circle). */
+const DISPLAY_KM: Record<GeoRef["kind"], number> = { city: 5, neighborhood: 1.5, subcity: 1.5, zip: 3 };
 
 export function AudienceSection({ draft, update, goTo, clients }: SectionProps) {
   const a = draft.audience;
@@ -72,7 +82,10 @@ export function AudienceSection({ draft, update, goTo, clients }: SectionProps) 
           <AudienceTargeting draft={draft} update={update} client={clients.find((c) => c.id === draft.clientId)} />
         </Group>
 
-        <Group title="Locations" hint={`Towns, neighbourhoods and PIN codes use Meta’s own areas; pins are circles. Scope: ${SCOPE_INFO[draft.setup.scope].label}.`}>
+        <Group
+          title="Locations"
+          hint={`Towns, neighbourhoods and PIN codes use Meta’s own areas; pins are circles. A neighbourhood is the tightest area Meta offers. For a town you can pick a smaller circle around its centre; the audience size above shows the effect. Scope: ${SCOPE_INFO[draft.setup.scope].label}.`}
+        >
           {!draft.generated && a.locations.length === 0 && (
             <Callout>
               Areas are picked by AI in{" "}
@@ -85,56 +98,104 @@ export function AudienceSection({ draft, update, goTo, clients }: SectionProps) 
 
           {a.locations.length > 0 && (
             <ul className="flex flex-col gap-2">
-              {a.locations.map((p, i) => (
-                <li key={`${p.name}-${i}`} className="flex flex-col gap-2 rounded-card bg-lavender-soft p-3">
-                  <div className="flex items-start gap-3">
-                    <MapPin className="mt-1 size-4 shrink-0 text-lavender-deep" aria-hidden />
-                    <div className="min-w-0 flex-1">
-                      <p className="text-[14px] font-bold">{p.name}</p>
-                      {p.why && <p className="text-[13px] text-ink-muted">{p.why}</p>}
+              {a.locations.map((p, i) => {
+                // The Meta area this row is, or the one its circle was made from.
+                const ref = p.geo ?? p.origin ?? null;
+                const isCity = ref?.kind === "city";
+                // A circle needs the area's own centre. A PIN is only shown at its town's centre, so no circle for it.
+                const canCircle = ref !== null && ref.kind !== "zip" && isPlaced(p);
+                const circles = isCity ? CIRCLE_RADII.city : CIRCLE_RADII.area;
+                return (
+                  <li key={`${p.name}-${i}`} className="flex flex-col gap-2 rounded-card bg-lavender-soft p-3">
+                    <div className="flex items-start gap-3">
+                      <MapPin className="mt-1 size-4 shrink-0 text-lavender-deep" aria-hidden />
+                      <div className="min-w-0 flex-1">
+                        <p className="text-[14px] font-bold">{p.name}</p>
+                        {p.why && <p className="text-[13px] text-ink-muted">{p.why}</p>}
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setPins((all) => all.filter((_, j) => j !== i))}
+                        className="grid size-8 shrink-0 place-items-center rounded-full hover:bg-paper"
+                        aria-label={`Remove ${p.name}`}
+                      >
+                        <X className="size-4" aria-hidden />
+                      </button>
                     </div>
-                    <button
-                      type="button"
-                      onClick={() => setPins((all) => all.filter((_, j) => j !== i))}
-                      className="grid size-8 shrink-0 place-items-center rounded-full hover:bg-paper"
-                      aria-label={`Remove ${p.name}`}
-                    >
-                      <X className="size-4" aria-hidden />
-                    </button>
-                  </div>
-                  <div className="flex flex-wrap items-center justify-between gap-2 pl-7">
-                    <p className="text-[12px] text-ink-muted">
-                      <span className="mr-1.5 rounded-pill bg-paper px-2 py-0.5 font-bold text-lavender-deep">{AREA_KIND[p.geo?.kind ?? "pin"]}</span>
-                      {p.geo ? "Meta's own area" : <span className="tabular-nums">{p.lat.toFixed(4)}, {p.lng.toFixed(4)}</span>}
-                    </p>
-                    {(!p.geo || p.geo.kind === "city") && (
-                      <label className="flex items-center gap-2 text-[13px] font-bold">
-                        <span className="sr-only">Radius for {p.name}</span>
-                        <Select
-                          className="h-9 w-36 bg-paper text-[14px]"
-                          value={p.geo ? (p.radiusKm >= 17 ? p.radiusKm : 0) : p.radiusKm}
-                          onChange={(e) => {
-                            const v = Number(e.target.value);
-                            setPins((all) => all.map((x, j) => (j === i ? { ...x, radiusKm: x.geo && v === 0 ? 5 : v } : x)));
-                          }}
-                        >
-                          {p.geo
-                            ? CITY_RADII.map((r) => (
-                                <option key={r} value={r}>
-                                  {r === 0 ? "Whole town" : `Town + ${r} km`}
-                                </option>
-                              ))
-                            : [...new Set([...RADII, p.radiusKm])].sort((x, y) => x - y).map((r) => (
+                    <div className="flex flex-wrap items-center justify-between gap-2 pl-7">
+                      <p className="text-[12px] text-ink-muted">
+                        <span className="mr-1.5 rounded-pill bg-paper px-2 py-0.5 font-bold text-lavender-deep">{AREA_KIND[p.geo?.kind ?? (p.origin ? "circle" : "pin")]}</span>
+                        {p.geo ? (
+                          isPlaced(p) ? "Meta's own area" : "Meta's own area · not on the map right now"
+                        ) : p.origin ? (
+                          isCity ? `Only within ${p.radiusKm} km of the centre` : `Within ${p.radiusKm} km of its centre`
+                        ) : (
+                          <span className="tabular-nums">{p.lat?.toFixed(4)}, {p.lng?.toFixed(4)}</span>
+                        )}
+                      </p>
+                      {(!ref || isCity || canCircle) && (
+                        <label className="flex items-center gap-2 text-[13px] font-bold">
+                          <span className="sr-only">Size of {p.name}</span>
+                          {ref ? (
+                            <Select
+                              className="h-9 w-52 bg-paper text-[14px]"
+                              // "m:" = Meta's own area (city: 0 = the town, 17–80 = town + km); "c:" = a circle around its centre.
+                              value={p.geo ? `m:${ref.kind === "city" && p.radiusKm >= 17 ? p.radiusKm : 0}` : `c:${p.radiusKm}`}
+                              onChange={(e) => {
+                                const [mode, n] = e.target.value.split(":");
+                                const v = Number(n);
+                                setPins((all) =>
+                                  all.map((x, j) =>
+                                    j !== i
+                                      ? x
+                                      : mode === "m"
+                                        ? { ...x, geo: ref, origin: null, radiusKm: ref.kind === "city" && v >= 17 ? v : DISPLAY_KM[ref.kind] }
+                                        : { ...x, geo: null, origin: ref, radiusKm: v },
+                                  ),
+                                );
+                              }}
+                            >
+                              <optgroup label="Meta's own area">
+                                <option value="m:0">{WHOLE[ref.kind]}</option>
+                                {ref.kind === "city" &&
+                                  CITY_RADII.map((r) => (
+                                    <option key={r} value={`m:${r}`}>
+                                      Town + {r} km
+                                    </option>
+                                  ))}
+                              </optgroup>
+                              {canCircle && (
+                                <optgroup label={isCity ? "Smaller: circle around the centre" : "Wider: circle around its centre"}>
+                                  {[...new Set([...circles, ...(p.geo ? [] : [p.radiusKm])])].sort((x, y) => x - y).map((r) => (
+                                    <option key={r} value={`c:${r}`}>
+                                      {isCity ? `Only within ${r} km` : `Within ${r} km`}
+                                    </option>
+                                  ))}
+                                </optgroup>
+                              )}
+                            </Select>
+                          ) : (
+                            <Select
+                              className="h-9 w-36 bg-paper text-[14px]"
+                              value={p.radiusKm}
+                              onChange={(e) => {
+                                const v = Number(e.target.value);
+                                setPins((all) => all.map((x, j) => (j === i ? { ...x, radiusKm: v } : x)));
+                              }}
+                            >
+                              {[...new Set([...RADII, p.radiusKm])].sort((x, y) => x - y).map((r) => (
                                 <option key={r} value={r}>
                                   {r} km circle
                                 </option>
                               ))}
-                        </Select>
-                      </label>
-                    )}
-                  </div>
-                </li>
-              ))}
+                            </Select>
+                          )}
+                        </label>
+                      )}
+                    </div>
+                  </li>
+                );
+              })}
             </ul>
           )}
 
@@ -176,10 +237,20 @@ export function AudienceSection({ draft, update, goTo, clients }: SectionProps) 
               pins={a.locations}
               addMode={addMode}
               onMove={(i, lat, lng) =>
-                // A moved Meta area becomes a plain circle where it was dropped.
+                // A moved Meta area (or a circle tightened from one) becomes a plain circle where it was dropped.
                 setPins((all) =>
                   all.map((x, j) =>
-                    j === i ? { ...x, lat, lng, geo: null, name: x.geo ? `${x.name} (moved)` : x.name, radiusKm: x.geo ? (x.geo.kind === "city" ? Math.max(5, Math.min(x.radiusKm, 25)) : 1.5) : x.radiusKm } : x,
+                    j === i
+                      ? {
+                          ...x,
+                          lat,
+                          lng,
+                          geo: null,
+                          origin: null,
+                          name: x.geo || x.origin ? `${x.name} (moved)` : x.name,
+                          radiusKm: x.geo ? (x.geo.kind === "city" ? Math.max(5, Math.min(x.radiusKm, 25)) : 1.5) : x.radiusKm,
+                        }
+                      : x,
                   ),
                 )
               }

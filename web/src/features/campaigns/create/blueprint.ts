@@ -128,8 +128,21 @@ export const DEVICE_LABELS: Record<DeviceOs, string> = { all: "All phones", andr
 /** A target circle. AI-made pins carry a one-line reason. */
 /** A Meta location id. With it Meta targets its own area; lat/lng are only for the map. */
 export type GeoRef = { kind: "city" | "neighborhood" | "subcity" | "zip"; key: string };
-/** One target area: a Meta id (`geo`) or a circle around lat/lng (`geo` null). */
-export type DraftPin = { name: string; lat: number; lng: number; radiusKm: number; why: string; geo?: GeoRef | null };
+/**
+ * One target area: a Meta id (`geo`) or a circle around lat/lng (`geo` null).
+ * - lat/lng are null only for a Meta area the map couldn't place; it is still targeted by its id.
+ * - `origin`: the Meta area this circle was tightened from, so it can be switched back.
+ */
+export type DraftPin = { name: string; lat: number | null; lng: number | null; radiusKm: number; why: string; geo?: GeoRef | null; origin?: GeoRef | null };
+export type PlacedPin = DraftPin & { lat: number; lng: number };
+export const isPlaced = (p: DraftPin): p is PlacedPin => p.lat !== null && p.lng !== null;
+
+/**
+ * Areas as the server expects them. A Meta area without a map position sends 0,0:
+ * Meta reads only its id. A circle always has a position.
+ */
+export const payloadPins = (pins: DraftPin[]) =>
+  pins.filter((p) => p.geo || isPlaced(p)).map((p) => ({ lat: p.lat ?? 0, lng: p.lng ?? 0, radiusKm: p.radiusKm, geo: p.geo ?? null }));
 
 export type DestinationOption = { id: Destination; label: string; blurb: string; available: boolean; note?: string };
 

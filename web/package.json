@@ -8,7 +8,7 @@
     "start": "next start",
     "lint": "eslint",
     "seed:admin": "node --env-file=.env.local scripts/seed-admin.mts",
-    "test:engine": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --test src/features/campaigns/engine/*.test.ts src/features/billing/*.test.ts src/features/leads/*.test.ts src/features/campaigns/geo/*.test.ts",
+    "test:engine": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --test src/features/campaigns/engine/*.test.ts src/features/billing/*.test.ts src/features/leads/*.test.ts src/features/campaigns/geo/*.test.ts src/features/campaigns/create/*.test.ts",
     "setup:storage": "node --env-file=.env.local scripts/setup-storage.mts",
     "predev": "node scripts/copy-map-worker.mjs",
     "prebuild": "node scripts/copy-map-worker.mjs"

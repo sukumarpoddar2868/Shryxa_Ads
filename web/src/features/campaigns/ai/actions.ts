@@ -99,9 +99,14 @@ export async function resolveAreaAction(input: z.input<typeof AreaInput>): Promi
   if (!client) return { ok: false, error: "Client not found." };
   const token = client.meta_connection_id ? await getConnectionToken(user.id, client.meta_connection_id) : null;
   const country = COUNTRY_TO_ISO[CURRENCY_TO_COUNTRY[d.currency]] ?? "IN";
-  const r = await resolveTyped(token, d.city, d.scope, country);
-  if (!r.areas.length) return { ok: false, error: r.notes[0] ?? "Couldn't find that area." };
-  return { ok: true, pins: r.areas, notes: r.notes };
+  try {
+    const r = await resolveTyped(token, d.city, d.scope, country);
+    if (!r.areas.length) return { ok: false, error: r.notes[0] ?? "Couldn't find that area." };
+    return { ok: true, pins: r.areas, notes: r.notes };
+  } catch (e) {
+    // Map search outage: say so instead of failing the whole action.
+    return { ok: false, error: e instanceof Error ? e.message : "Couldn't look up that area. Please try again." };
+  }
 }
 
 const CardsInput = z.object({

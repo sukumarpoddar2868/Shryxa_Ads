@@ -19,11 +19,14 @@ export const SCOPE_INFO: Record<ReachScope, { label: string; blurb: string }> = 
   metro: { label: "Metro", blurb: "The city + 40 km around it — regional brands" },
 };
 
-/** One target area after lookup. `geo` = a Meta location id; null = a lat/lng circle. */
+/**
+ * One target area after lookup. `geo` = a Meta location id; null = a lat/lng circle.
+ * lat/lng are null only for a Meta area the map couldn't place (it is still targeted by its id).
+ */
 export const Pin = z.object({
   name: z.string().min(1),
-  lat: z.number().min(-90).max(90),
-  lng: z.number().min(-180).max(180),
+  lat: z.number().min(-90).max(90).nullable(),
+  lng: z.number().min(-180).max(180).nullable(),
   radius_km: z.number().min(0).max(80),
   why: z.string().default(""),
   geo: z.object({ kind: z.enum(["city", "neighborhood", "subcity", "zip"]), key: z.string().min(1).max(40) }).nullable().default(null),

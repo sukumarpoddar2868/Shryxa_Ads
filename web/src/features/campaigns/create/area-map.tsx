@@ -3,11 +3,12 @@
 import { useEffect, useRef } from "react";
 import { LngLatBounds, Map as MapLibre, Marker, NavigationControl, setWorkerUrl, type GeoJSONSource } from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
-import type { DraftPin } from "./blueprint";
+import { isPlaced, type DraftPin } from "./blueprint";
 
 /**
  * Free map (MapLibre + OpenFreeMap tiles, © OpenStreetMap) showing each
  * target area as a numbered, draggable pin with its radius circle.
+ * An area without a map position (a Meta id the map couldn't place) is skipped.
  * Loaded client-only (see audience-section's dynamic import).
  */
 
@@ -33,18 +34,17 @@ function circle(lat: number, lng: number, km: number, steps = 64): [number, numb
 function areasGeoJSON(pins: DraftPin[]) {
   return {
     type: "FeatureCollection" as const,
-    features: pins.map((p, i) => ({
-      type: "Feature" as const,
-      properties: { i },
-      geometry: { type: "Polygon" as const, coordinates: [circle(p.lat, p.lng, p.radiusKm)] },
-    })),
+    features: pins.flatMap((p, i) =>
+      isPlaced(p) ? [{ type: "Feature" as const, properties: { i }, geometry: { type: "Polygon" as const, coordinates: [circle(p.lat, p.lng, p.radiusKm)] } }] : [],
+    ),
   };
 }
 
 function fit(map: MapLibre, pins: DraftPin[]) {
-  if (!pins.length) return;
+  const placed = pins.filter(isPlaced);
+  if (!placed.length) return;
   const b = new LngLatBounds();
-  for (const p of pins) for (const c of circle(p.lat, p.lng, p.radiusKm, 16)) b.extend(c);
+  for (const p of placed) for (const c of circle(p.lat, p.lng, p.radiusKm, 16)) b.extend(c);
   map.fitBounds(b, { padding: 40, maxZoom: 13, duration: 600 });
 }
 
@@ -129,7 +129,8 @@ function draw({ mapRef, ready, markers, latest, fittedCount }: Refs) {
   const { pins: ps } = latest.current;
   (map.getSource("areas") as GeoJSONSource | undefined)?.setData(areasGeoJSON(ps));
   markers.current.forEach((m) => m.remove());
-  markers.current = ps.map((p, i) => {
+  markers.current = ps.flatMap((p, i) => {
+    if (!isPlaced(p)) return [];
     const el = document.createElement("div");
     el.className = "grid size-7 cursor-grab place-items-center rounded-full bg-ink text-[12px] font-extrabold text-chartreuse ring-2 ring-paper shadow-md";
     el.textContent = String(i + 1);
@@ -139,7 +140,7 @@ function draw({ mapRef, ready, markers, latest, fittedCount }: Refs) {
       const ll = m.getLngLat();
       latest.current.onMove(i, Number(ll.lat.toFixed(6)), Number(ll.lng.toFixed(6)));
     });
-    return m;
+    return [m];
   });
   // Re-fit only when pins are added/removed (not while dragging).
   if (fittedCount.current !== ps.length) {

@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { Gauge } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { estimateAudienceAction, type EstimateInput, type EstimateResult } from "../audiences/estimate";
-import type { Draft } from "./blueprint";
+import { payloadPins, type Draft } from "./blueprint";
 
 const fmt = (n: number) => (n >= 1e6 ? `${(n / 1e6).toFixed(1)}M` : n >= 1e3 ? `${Math.round(n / 1e3)}K` : String(n));
 
@@ -17,7 +17,7 @@ function inputFor(d: Draft): EstimateInput | null {
     objective: d.objective,
     destination: d.ad.destination,
     currency: d.campaign.currency,
-    pins: a.locations.map((p) => ({ lat: p.lat, lng: p.lng, radiusKm: p.radiusKm, geo: p.geo ?? null })),
+    pins: payloadPins(a.locations),
     ageMin: a.ageMin,
     ageMax: a.ageMax,
     gender: a.gender,
